@@ -1,0 +1,83 @@
+{
+  "preferencias": {
+    "linguagem": "python",
+    "nivel_detalhe": "alto",
+    "formato_resposta": "estruturado"
+  },
+  "preferencias_tecnicas": {
+    "linguagem_principal": [
+      "python",
+      "sql",
+      "javascript",
+      "html",
+      "css",
+      "r"
+    ],
+    "bibliotecas_preferidas_python": [
+      "polars",
+      "pyspark",
+      "pandas",
+      "numpy",
+      "scikit-learn",
+      "matplotlib",
+      "seaborn",
+      "plotly",
+      "tensorflow",
+      "keras"
+    ],
+    "bibliotecas_preferidas_r": [
+      "ggplot2",
+      "data.table",
+      "dplyr",
+      "tidyr",
+      "caret",
+      "randomForest",
+      "lightgbm",
+      "optim",
+      "shiny"
+    ],
+    "padrao_codigo": "PEP8",
+    "nivel_comentarios": "detalhado",
+    "estilo_documentacao": "docstring"
+  },
+  "objetivos": [
+    "estudo",
+    "organização pessoal",
+    "análise de dados"
+  ],
+  "restricoes": {
+    "executar_codigo": "somente_com_confirmacao",
+    "acessar_internet": true,
+    "salvar_arquivos": "somente_diretorios_permitidos",
+    "modificar_memoria": "confirmacao_interativa"
+  },
+  "estilo_comunicacao": {
+    "tom": "tecnico",
+    "uso_exemplos": true,
+    "uso_analogias": true,
+    "idioma": "pt-BR"
+  },
+  "estrutura_resposta": {
+    "usar_topicos": true,
+    "usar_passos_numerados": true,
+    "resumo_final": true
+  },
+  "profundidade": {
+    "nivel": "avancado",
+    "explicitar_supostos": true,
+    "alertar_limitacoes": true
+  },
+  "politica_memoria": {
+    "registrar_interacoes": true,
+    "registrar_logs": true,
+    "aprender_preferencias": "confirmacao_contextual",
+    "inferir_padroes": "com_autorizacao"
+  },
+  "limites_eticos": {
+    "inferir_dados_sensiveis": "somente_com_autorizacao",
+    "monitoramento_passivo": "somente_eventos_tecnicos",
+    "decisoes_criticas_autonomas": "somente_recomendacao"
+  },
+  "memoria_episodica": [],
+  "historico": []
+}
