@@ -1,19 +1,26 @@
 import json
 from pathlib import Path
-from datetime import datetime
+import os
 import uuid
+from datetime import datetime
 
-CAMINHO_MEMORIA = Path("memory/profile.json")
+MEMORY_FILE = Path("memory/profile.json")
+MAX_INTERACOES = 50
+
 
 def carregar_memoria():
-    if CAMINHO_MEMORIA.exists():
-        with open(CAMINHO_MEMORIA, "r", encoding="utf-8") as f:
-            return json.load(f)
-    return {}
+    if not os.path.exists(MEMORY_FILE):
+        return {
+            "memoria_episodica": []
+        }
+    with open(MEMORY_FILE, "r", encoding="utf-8") as f:
+        return json.load(f)
+
 
 def salvar_memoria(memoria):
-    with open(CAMINHO_MEMORIA, "w", encoding="utf-8") as f:
-        json.dump(memoria, f, indent=2, ensure_ascii=False)
+    with open(MEMORY_FILE, "w", encoding="utf-8") as f:
+        json.dump(memoria, f, ensure_ascii=False, indent=2)
+
 
 def registrar_interacao(memoria, tipo, pergunta, resposta, tema=None, artefatos=None):
     interacao = {
@@ -27,25 +34,21 @@ def registrar_interacao(memoria, tipo, pergunta, resposta, tema=None, artefatos=
     }
 
     memoria.setdefault("memoria_episodica", []).append(interacao)
-    memoria["memoria_episodica"] = memoria["memoria_episodica"][-50:]
+    memoria["memoria_episodica"] = memoria["memoria_episodica"][-MAX_INTERACOES:]
 
-    
+
 def obter_interacao_anterior(memoria, offset=1):
-    """
-    offset=1 → última
-    offset=2 → anterior à anterior
-    """
-    memoria_ep = memoria.get("memoria_episodica", [])
-    if len(memoria_ep) >= offset:
-        return memoria_ep[-offset]
+    epis = memoria.get("memoria_episodica", [])
+    if len(epis) >= offset:
+        return epis[-offset]
     return None
 
 
 def buscar_por_tema(memoria, tema, limite=5):
-    return [
-        i for i in reversed(memoria.get("memoria_episodica", []))
-        if i.get("tema") == tema
-    ][:limite]
-
-
-
+    resultados = []
+    for i in reversed(memoria.get("memoria_episodica", [])):
+        if i.get("tema") == tema:
+            resultados.append(i)
+        if len(resultados) >= limite:
+            break
+    return resultados
