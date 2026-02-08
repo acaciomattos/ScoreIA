@@ -16,6 +16,6 @@ while True:
         tema = entrada.replace("estudar:", "").strip()
         resposta = agente.estudar(tema)
     else:
-        resposta = agente.pensar(entrada)
+        resposta = agente.executar(entrada)
 
     print("\nAgente:\n", resposta, "\n")
