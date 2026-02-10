@@ -67,12 +67,34 @@
     "explicitar_supostos": true,
     "alertar_limitacoes": true
   },
+  "padroes_planejamento": {
+  "priorizacao": {
+    "tecnica": "alta",
+    "estudo": "media",
+    "administrativa": "baixa"
+  },
+  "duracao_media": {
+    "tecnica": 90,
+    "nao_tecnica": 45
+  },
+  "comportamento_revisao": {
+    "reordena_tecnicas_para_topo": true,
+    "remove_tarefas_administrativas": false
+  }
+},
   "politica_memoria": {
     "registrar_interacoes": true,
     "registrar_logs": true,
     "aprender_preferencias": "confirmacao_contextual",
-    "inferir_padroes": "com_autorizacao"
+    "inferir_padroes": "com_autorizacao",
+    "aprender_planejamento": "somente_por_revisoes"
   },
+  "politica_planejamento": {
+  "aprender_padroes_edicao": true,
+  "aplicar_ajustes": "somente_com_confirmacao",
+  "limite_interacoes_para_aprendizado": 20,
+  "replanejamento_permitido": true
+},
   "limites_eticos": {
     "inferir_dados_sensiveis": "somente_com_autorizacao",
     "monitoramento_passivo": "somente_eventos_tecnicos",
