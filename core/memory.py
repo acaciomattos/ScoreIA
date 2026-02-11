@@ -52,3 +52,24 @@ def buscar_por_tema(memoria, tema, limite=5):
         if len(resultados) >= limite:
             break
     return resultados
+
+
+def registrar_padrao_planejamento(memoria, evento):
+    """
+    Registra eventos estruturados de planejamento para aprendizado de padrões.
+    """
+    if "padroes_planejamento" not in memoria:
+        memoria["padroes_planejamento"] = []
+
+    memoria["padroes_planejamento"].append({
+        "timestamp": evento.get("timestamp"),
+        "acao": evento.get("acao"),              # incluir | remover | reordenar
+        "categoria": evento.get("categoria"),    # estudo | administrativa | etc
+        "tecnica": evento.get("tecnica"),
+        "detalhes": evento.get("detalhes", {})
+    })
+
+    # limite de segurança
+    memoria["padroes_planejamento"] = memoria["padroes_planejamento"][-100:]
+
+
