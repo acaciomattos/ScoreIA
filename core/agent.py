@@ -84,8 +84,6 @@ REGRAS:
 - Apenas recomendar, nunca decidir
 """
 
-
-
     # =========================
     # Inferência de referência
     # =========================
@@ -173,7 +171,6 @@ SOLICITAÇÃO ATUAL:
         salvar_memoria(self.memoria)
         return resposta
 
-
     # =========================
     # Estudo guiado
     # =========================
@@ -221,7 +218,9 @@ TAREFAS:
         salvar_memoria(self.memoria)
         return resposta
 
-
+    # =========================
+    # Planejamento pessoal
+    # =========================
     def planejar(self, objetivo, horizonte="semanal"):
         """
         Planejamento de vida pessoal.
@@ -280,7 +279,9 @@ TAREFAS:
         salvar_memoria(self.memoria)
         return resposta
 
-
+    # =========================
+    # Exportação de planejamentos
+    # =========================
     def exportar_planejamento_csv(self, caminho="planejamento.csv", ultimo=True):
         """
         Exporta planejamento(s) para CSV.
@@ -326,7 +327,9 @@ TAREFAS:
 
         return f"Planejamento exportado com sucesso para '{caminho}'."
 
-
+    # =========================
+    # Exportação de tarefas
+    # =========================
     def exportar_tarefas_csv(self, caminho="tarefas.csv", ultimo=True):
         """
         Exporta tarefas de planejamento para CSV.
@@ -366,14 +369,9 @@ TAREFAS:
 
         return f"Tarefas exportadas com sucesso para '{caminho}'."
     
-    
-    def _obter_tarefas_ativas(self):
-        for i in reversed(self.memoria.get("memoria_episodica", [])):
-            if i.get("tipo") == "planejamento":
-                return i
-        return None
-    
-    
+    # =========================
+    # Exclusão de tarefas
+    # =========================
     def remover_tarefa(self, indice):
         tarefa = self._obter_tarefas_ativas()[indice]
         tarefa["status"] = "removida"
@@ -386,7 +384,9 @@ TAREFAS:
 
         return tarefa
 
-
+    # =========================
+    # Reordenação de tarefas
+    # =========================
     def reordenar_tarefa(self, indice_origem, indice_destino):
         tarefas = self._obter_tarefas_ativas()
         tarefa = tarefas.pop(indice_origem)
@@ -402,7 +402,9 @@ TAREFAS:
             }
         })
 
-
+    # =========================
+    # Refazer planejamento com base em padrões de revisão
+    # =========================
     def refazer_planejamento(self):
         """
         Analisa padrões de edição e propõe ajustes no planejamento.
@@ -446,7 +448,9 @@ TAREFAS:
 
         return resposta
 
-
+    # =========================
+    # Criação de tarefas
+    # =========================
     def _criar_tarefa(self, descricao, dia=None, origem="planejamento"):
         return {
             "id": str(uuid.uuid4()),
@@ -461,7 +465,9 @@ TAREFAS:
             "revisoes": []
         }
 
-
+    # =========================
+    # Inferindo categoria das tarefas
+    # =========================
     def _inferir_categoria(self, descricao):
         d = descricao.lower()
         if any(k in d for k in ["estudar", "aprender", "ler"]):
@@ -470,18 +476,24 @@ TAREFAS:
             return "administrativa"
         return "geral"
 
-
+    # =========================
+    # Inferindo técnica das tarefas
+    # =========================
     def _inferir_tecnica(self, descricao):
         categoria = self._inferir_categoria(descricao)
         return categoria == "estudo"
 
-
+    # =========================
+    # Inferindo duração estimada das tarefas
+    # =========================
     def _inferir_duracao(self, descricao):
         if self._inferir_tecnica(descricao):
             return self.profile["padroes_planejamento"]["duracao_media"]["tecnica"]
         return self.profile["padroes_planejamento"]["duracao_media"]["nao_tecnica"]
 
-
+    # =========================
+    # Inclusão de tarefas manualmente
+    # =========================
     def incluir_tarefa(self, descricao, dia=None):
         tarefa = self._criar_tarefa(descricao, dia, origem="usuario")
         self.memoria["tarefas"].append(tarefa)
@@ -494,6 +506,59 @@ TAREFAS:
 
         return tarefa
 
+    # =========================
+    # Consulta de tarefas ativas
+    # =========================
     def _obter_tarefas_ativas(self):
         return [t for t in self.memoria.get("tarefas", []) if t["status"] == "ativa"]
+
+    # =========================
+    # Atualização de padrões de planejamento com base em interações
+    # =========================
+    def atualizar_padroes_planejamento(self):
+        eventos = self.memoria.get("padroes_planejamento", [])
+        padroes = self.profile["padroes_planejamento"]
+
+        if not eventos:
+            return
+
+        reordenacoes_tecnicas = [
+            e for e in eventos
+            if e["acao"] == "reordenar" and e["tecnica"]
+        ]
+
+        if len(reordenacoes_tecnicas) >= 3:
+            padroes["comportamento_revisao"]["reordena_tecnicas_para_topo"] = True
+
+        remocoes_admin = [
+            e for e in eventos
+            if e["acao"] == "remover" and e["categoria"] == "administrativa"
+        ]
+
+        if len(remocoes_admin) >= 2:
+            padroes["comportamento_revisao"]["remove_tarefas_administrativas"] = True
+
+    # =========================
+    # Refazer planejamento com base em padrões de revisão
+    # =========================
+    def refazer_planejamento(self):
+        tarefas = self._obter_tarefas_ativas()
+        padroes = self.profile["padroes_planejamento"]
+
+        # 1. Reordenar tarefas técnicas
+        if padroes["comportamento_revisao"]["reordena_tecnicas_para_topo"]:
+            tarefas.sort(key=lambda t: not t["tecnica"])
+
+        # 2. Remover administrativas se padrão indicar
+        if padroes["comportamento_revisao"]["remove_tarefas_administrativas"]:
+            tarefas = [t for t in tarefas if t["categoria"] != "administrativa"]
+
+        # 3. Recalcular prioridades
+        for i, tarefa in enumerate(tarefas):
+            tarefa["prioridade"] = i + 1
+            tarefa["origem"] = "refatorado_por_padrao"
+
+        self.memoria["tarefas"] = tarefas
+        return tarefas
+
 
