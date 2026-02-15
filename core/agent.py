@@ -470,7 +470,7 @@ TAREFAS:
     # Atualização de padrões de planejamento com base em interações
     # =========================
     def atualizar_padroes_planejamento(self):
-        eventos = self.memoria.get("padroes_planejamento", [])
+        eventos = self.memoria.get("eventos_planejamento", [])
         padroes = self.memoria["padroes_planejamento"]
 
         if not eventos:
