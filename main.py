@@ -1,6 +1,8 @@
 from core.agent import Agente
 from core.memory import registrar_interacao, salvar_memoria
 
+
+
 agente = Agente()
 
 

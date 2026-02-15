@@ -13,6 +13,8 @@ from datetime import datetime
 from tools.planejamento_parser import parsear_tarefas_planejamento
 import uuid
 
+
+
 OLLAMA_URL = "http://localhost:11434/api/generate"
 
 
