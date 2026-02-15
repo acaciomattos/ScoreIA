@@ -1,5 +1,5 @@
 from core.agent import Agente
-from core.memory import registrar_interacao, salvar_memoria, salvar_profile
+from core.memory import registrar_interacao, salvar_memoria
 
 agente = Agente()
 
@@ -97,7 +97,6 @@ def handle_interacao(agent, mensagem):
     # PERSISTÊNCIA
     # -----------------------------
     salvar_memoria(agent.memoria)
-    salvar_profile(agent.profile)
 
     return resposta
 

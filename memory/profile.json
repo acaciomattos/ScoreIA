@@ -68,20 +68,29 @@
     "alertar_limitacoes": true
   },
   "padroes_planejamento": {
-  "priorizacao": {
-    "tecnica": "alta",
-    "estudo": "media",
-    "administrativa": "baixa"
+    "priorizacao": {
+      "tecnica": "alta",
+      "estudo": "media",
+      "administrativa": "baixa"
+    },
+    "duracao_media": {
+      "tecnica": 90,
+      "nao_tecnica": 45
+    },
+    "comportamento_revisao": {
+      "reordena_tecnicas_para_topo": true,
+      "remove_tarefas_administrativas": false
+    }
   },
-  "duracao_media": {
-    "tecnica": 90,
-    "nao_tecnica": 45
+  "config_modelagem": {
+    "algoritmo_padrao": "lightgbm",
+    "usar_otimizacao": true,
+    "max_trials": 50,
+    "validacao": "kfold",
+    "k_folds": 5,
+    "metrica_regressao": "rmse",
+    "metrica_classificacao": "auc"
   },
-  "comportamento_revisao": {
-    "reordena_tecnicas_para_topo": true,
-    "remove_tarefas_administrativas": false
-  }
-},
   "politica_memoria": {
     "registrar_interacoes": true,
     "registrar_logs": true,
@@ -90,16 +99,26 @@
     "aprender_planejamento": "somente_por_revisoes"
   },
   "politica_planejamento": {
-  "aprender_padroes_edicao": true,
-  "aplicar_ajustes": "somente_com_confirmacao",
-  "limite_interacoes_para_aprendizado": 20,
-  "replanejamento_permitido": true
-},
+    "aprender_padroes_edicao": true,
+    "aplicar_ajustes": "somente_com_confirmacao",
+    "limite_interacoes_para_aprendizado": 20,
+    "replanejamento_permitido": true
+  },
   "limites_eticos": {
     "inferir_dados_sensiveis": "somente_com_autorizacao",
     "monitoramento_passivo": "somente_eventos_tecnicos",
     "decisoes_criticas_autonomas": "somente_recomendacao"
   },
-  "memoria_episodica": [],
+  "memoria_episodica": [
+    {
+      "id": "7521f925-6ab4-43ed-8175-406e9801094c",
+      "tipo": "estudo",
+      "tema": "Teoria cognitivo comportamental",
+      "pergunta": "estudar: Teoria cognitivo comportamental",
+      "resposta": " **Tema:** Teoria Cognitivo Comportamental (TCC)\n\n**Explicação Técnica:**\nA Teoria Cognitivo Comportamental (TCC) é um modelo psicológico que se concentra na relação entre o pensamento, as emoções e o comportamento humano. Ela visa explicar como os indivíduos aprendem e modificam seus padrões de pensamento e condutas para alcançar objetivos específicos. A TCC é uma abordagem integrativa que combina elementos da psicologia cognitiva, psicologia comportamental e terapia cognitivo-comportamental.\n\n**Exemplo Prático:**\nImagine um indivíduo que tem medo de falar em público (fobia de fala). A TCC explica como esse indivíduo pode aprender a se adaptar ao medo e melhorar sua performance oratória. O processo envolve a identificação da pensamentos negativos (\"Eu não posso falar em público, vou ter um ataque de nervos\"), analisando suas consequências (falha na apresentação), desafiar e reinterpretar esses pensamentos (por exemplo, \"Eu sei que eu tenho habilidades para falar em público e posso controlar meus nervos\") e fazendo alterações no comportamento (prática regular de palestras em grupo).\n\n**Exercícios Progressivos:**\n1. Identifique pensamentos negativos em um problema pessoal ou profissional, analise suas consequências e proponha mudanças na interpretação desses pensamentos.\n2. Role-play uma situação de medo, usando a TCC para ajudar uma pessoa a se adaptar ao medo e melhorar o comportamento.\n3. Conceba um estudo empírico que analise a eficácia da TCC em modificar padrões de pensamento e condutas.\n4. Implemente a TCC na criação de programa educacional para melhoria do desempenho acadêmico ou profissional.\n5. Aplique a TCC em uma terapia individual com um cliente que está sofrendo de fobias ou distúrbios relacionados à ansiedade.\n\n**Limitações e Armadilhas Comuns:**\n1. A TCC pode se tornar excessivamente centrada no pensamento, ignorando o papel da emoção e das experiências do corpo no comportamento humano.\n2. É importante ter um bom entendimento da natureza do problema para aplicar com sucesso a TCC, pois erros de diagnóstico podem impedir o progresso.\n3. A TCC pode ser visto como excessivamente racional e ignorar fatores não racionais que influenciam o comportamento humano.\n4. Os indivíduos podem resistir à mudança de pensamentos negativos, o que pode impedir a eficácia da TCC.\n5. A TCC não é uma panaceia para todos os problemas de aprendizagem, condutas ou emoção. É importante ter um abordagem integrativa para tratar esses problemas.\n\n**Referências:**\n1. Bandura, A. (1977). Self-efficacy: Toward a unifying theory of behavior change. Psychological Review, 84(2), 191-215. URL: https://www.jstor.org/stable/2065334\n2. Cautin, D. L. (2013). The cognitive-behavioral approach to emotion and health. In J. A. Bargh & M. F. DeWall (Eds.), The handbook of social psychology: Health (pp. 498-527). Wiley Blackwell. URL: https://onlinelibrary.wiley.com/doi/abs/10.1002/9781118623500.ch15\n3. Hayes, S. C., Barnes-Holmes, D., & Wilson, K. G. (2004). Acceptance and commitment therapy: Model, processes, and outcomes. Psychotherapy, 41(1), 116-128. URL: https://psycnet.apa.org/record/2004-97353-007\n4. Nezu, A. M., & D'Zurilla, T. J. (2010). Problem solving therapy. In T. J. D'Zurilla, N. H. Kassinove, & G. J. Nezu (Eds.), Handbook of problem-solving and cognitive-behavioral therapies (pp. 395-418). Wiley-Blackwell. URL: https://onlinelibrary.wiley.com/doi/abs/10.1002/9781444336367.ch26\n5. Wilson, K. G., & Doshay, L. M. (2004). Acceptance and commitment therapy for anxiety disorders: A clinician's guide to the empirical basis. Guilford Press. URL: https://www.guilford.com/books/Acceptance-and-Commitment-Therapy-for-Anxiety-Disorders/Wilson-Doshay/9781593850647",
+      "artefatos": {},
+      "timestamp": "2026-02-14T20:59:03.361177"
+    }
+  ],
   "historico": []
 }

@@ -403,52 +403,6 @@ TAREFAS:
         })
 
     # =========================
-    # Refazer planejamento com base em padrões de revisão
-    # =========================
-    def refazer_planejamento(self):
-        """
-        Analisa padrões de edição e propõe ajustes no planejamento.
-        Não aplica nenhuma mudança sem confirmação explícita.
-        """
-
-        padroes = self.memoria.get("padroes_planejamento", {})
-        tarefas = self.memoria.get("tarefas_ativas", [])
-
-        if not tarefas:
-            return "Não há tarefas ativas para replanejar."
-
-        propostas = []
-
-        # Prioridade cognitiva
-        if padroes.get("reordenacoes", {}).get("tarefas_tecnicas_para_cima", 0) >= 2:
-            propostas.append("priorizar tarefas técnicas no início da lista")
-
-        # Granularidade
-        if padroes.get("remocoes", {}).get("tarefas_longas", 0) >= 2:
-            propostas.append("dividir tarefas longas em subtarefas")
-
-        # Revisão recorrente
-        if padroes.get("inclusoes", {}).get("revisao", 0) >= 2:
-            propostas.append("incluir tarefas de revisão após blocos de estudo")
-
-        if not propostas:
-            return (
-                "Analisei suas revisões, mas ainda não há padrões "
-                "suficientes para propor ajustes no planejamento."
-            )
-
-        resposta = "Com base nas revisões observadas, posso:\n\n"
-        for i, p in enumerate(propostas, 1):
-            resposta += f"{i}. {p}\n"
-
-        resposta += "\nDeseja que eu aplique essas mudanças?"
-
-        # Guarda proposta temporária (não persistente)
-        self._proposta_replanejamento = propostas
-
-        return resposta
-
-    # =========================
     # Criação de tarefas
     # =========================
     def _criar_tarefa(self, descricao, dia=None, origem="planejamento"):
@@ -488,8 +442,8 @@ TAREFAS:
     # =========================
     def _inferir_duracao(self, descricao):
         if self._inferir_tecnica(descricao):
-            return self.profile["padroes_planejamento"]["duracao_media"]["tecnica"]
-        return self.profile["padroes_planejamento"]["duracao_media"]["nao_tecnica"]
+            return self.memoria["padroes_planejamento"]["duracao_media"]["tecnica"]
+        return self.memoria["padroes_planejamento"]["duracao_media"]["nao_tecnica"]
 
     # =========================
     # Inclusão de tarefas manualmente
@@ -517,7 +471,7 @@ TAREFAS:
     # =========================
     def atualizar_padroes_planejamento(self):
         eventos = self.memoria.get("padroes_planejamento", [])
-        padroes = self.profile["padroes_planejamento"]
+        padroes = self.memoria["padroes_planejamento"]
 
         if not eventos:
             return
@@ -543,7 +497,7 @@ TAREFAS:
     # =========================
     def refazer_planejamento(self):
         tarefas = self._obter_tarefas_ativas()
-        padroes = self.profile["padroes_planejamento"]
+        padroes = self.memoria["padroes_planejamento"]
 
         # 1. Reordenar tarefas técnicas
         if padroes["comportamento_revisao"]["reordena_tecnicas_para_topo"]:
@@ -560,5 +514,121 @@ TAREFAS:
 
         self.memoria["tarefas"] = tarefas
         return tarefas
+
+
+    def analisar_dados(self, config):
+        """
+        Executa pipeline estatístico com base nas configurações da interface.
+
+        config esperado:
+        {
+            "caminho": str,
+            "formato": "csv" | "parquet",
+            "target": str,
+            "task": "regression" | "classification",
+            "modelo": "lightgbm" | "mlp",
+            "otimizar": bool,
+            "n_trials": int
+        }
+        """
+
+        from tools.data_pipeline import DataPipeline
+        from tools.model_factory import ModelFactory
+        from tools.metrics import (
+            metricas_regressao,
+            metricas_classificacao
+        )
+        from tools.optimization import otimizar_lightgbm
+
+        pipeline = DataPipeline(config["caminho"])
+
+        # =========================
+        # Carregamento condicional
+        # =========================
+        if config["formato"] == "csv":
+            df = pipeline.carregar_csv()
+        elif config["formato"] == "parquet":
+            df = pipeline.carregar_parquet()
+        else:
+            raise ValueError("Formato de arquivo não suportado.")
+
+        # =========================
+        # Split
+        # =========================
+        train, test = pipeline.train_test_split(config["target"])
+
+        X_train = train.drop(config["target"]).to_numpy()
+        y_train = train[config["target"]].to_numpy()
+
+        X_test = test.drop(config["target"]).to_numpy()
+        y_test = test[config["target"]].to_numpy()
+
+        # =========================
+        # Otimização (opcional)
+        # =========================
+        params = None
+        if config.get("otimizar", False) and config["modelo"] == "lightgbm":
+            params = otimizar_lightgbm(
+                X_train,
+                y_train,
+                task=config["task"],
+                n_trials=config.get("n_trials", 50)
+            )
+
+        # =========================
+        # Construção do modelo
+        # =========================
+        if config["modelo"] == "lightgbm":
+            model = ModelFactory.criar_lightgbm(
+                task=config["task"],
+                params=params
+            )
+
+        elif config["modelo"] == "mlp":
+            input_dim = X_train.shape[1]
+            output_dim = 1
+            model = ModelFactory.criar_mlp(input_dim, output_dim)
+
+        else:
+            raise ValueError("Modelo não suportado.")
+
+        # =========================
+        # Treino
+        # =========================
+        model.fit(X_train, y_train)
+
+        # =========================
+        # Predição
+        # =========================
+        y_pred = model.predict(X_test)
+
+        # =========================
+        # Métricas
+        # =========================
+        if config["task"] == "regression":
+            metricas = metricas_regressao(y_test, y_pred)
+        else:
+            metricas = metricas_classificacao(y_test, y_pred)
+
+        # =========================
+        # Registro na memória
+        # =========================
+        registrar_interacao(
+            memoria=self.memoria,
+            tipo="analise_dados",
+            pergunta=f"analise: {config['caminho']}",
+            resposta=str(metricas),
+            tema="análise de dados",
+            artefatos={
+                "config": config,
+                "metricas": metricas
+            }
+        )
+
+        salvar_memoria(self.memoria)
+
+        return metricas
+
+
 
 
