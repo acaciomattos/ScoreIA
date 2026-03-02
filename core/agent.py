@@ -12,6 +12,10 @@ import os
 from datetime import datetime
 from tools.planejamento_parser import parsear_tarefas_planejamento
 import uuid
+import torch
+import torch.nn as nn
+import numpy as np
+from copy import deepcopy
 
 
 
@@ -519,20 +523,6 @@ TAREFAS:
 
 
     def analisar_dados(self, config):
-        """
-        Executa pipeline estatístico com base nas configurações da interface.
-
-        config esperado:
-        {
-            "caminho": str,
-            "formato": "csv" | "parquet",
-            "target": str,
-            "task": "regression" | "classification",
-            "modelo": "lightgbm" | "mlp",
-            "otimizar": bool,
-            "n_trials": int
-        }
-        """
 
         from tools.data_pipeline import DataPipeline
         from tools.model_factory import ModelFactory
@@ -540,81 +530,158 @@ TAREFAS:
             metricas_regressao,
             metricas_classificacao
         )
-        from tools.optimization import otimizar_lightgbm
+        from tools.optimization import otimizar_modelo_cv
+        from core.memory import registrar_interacao, salvar_memoria
 
+        from sklearn.model_selection import KFold, StratifiedKFold
+        import numpy as np
+        import torch
+
+        # ==========================================================
+        # 1. CARREGAMENTO
+        # ==========================================================
         pipeline = DataPipeline(config["caminho"])
+        pipeline.carregar(config["formato"])
 
-        # =========================
-        # Carregamento condicional
-        # =========================
-        if config["formato"] == "csv":
-            df = pipeline.carregar_csv()
-        elif config["formato"] == "parquet":
-            df = pipeline.carregar_parquet()
+        # ==========================================================
+        # 2. HOLDOUT (ANTES DE QUALQUER FIT)
+        # ==========================================================
+        X_train_raw, X_test_raw, y_train, y_test = pipeline.split_holdout(
+            target=config["target"],
+            test_size=0.2,
+            task=config["task"]
+        )
+
+        # ==========================================================
+        # 3. FIT TRANSFORM APENAS NO TREINO
+        # ==========================================================
+        X_train = pipeline.fit_transform(
+            X_train_raw,
+            modelo=config["modelo"]
+        )
+
+        X_test = pipeline.transform(X_test_raw)
+
+        input_dim = X_train.shape[1]
+
+        # ==========================================================
+        # 4. CRIAÇÃO DOS FOLDS (SOMENTE TREINO)
+        # ==========================================================
+        if config["task"] == "classification":
+            kf = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
         else:
-            raise ValueError("Formato de arquivo não suportado.")
+            kf = KFold(n_splits=5, shuffle=True, random_state=42)
 
-        # =========================
-        # Split
-        # =========================
-        train, test = pipeline.train_test_split(config["target"])
+        folds = []
 
-        X_train = train.drop(config["target"]).to_numpy()
-        y_train = train[config["target"]].to_numpy()
+        for train_idx, val_idx in kf.split(X_train, y_train):
+            folds.append((
+                X_train[train_idx],
+                X_train[val_idx],
+                y_train[train_idx],
+                y_train[val_idx]
+            ))
 
-        X_test = test.drop(config["target"]).to_numpy()
-        y_test = test[config["target"]].to_numpy()
+        # ==========================================================
+        # 5. OTIMIZAÇÃO (SOMENTE TREINO)
+        # ==========================================================
+        best_params = None
+        modelo_final = config["modelo"]
 
-        # =========================
-        # Otimização (opcional)
-        # =========================
-        params = None
-        if config.get("otimizar", False) and config["modelo"] == "lightgbm":
-            params = otimizar_lightgbm(
-                X_train,
-                y_train,
+        if config.get("otimizar", False):
+
+            resultado_otimizacao = otimizar_modelo_cv(
+                folds=folds,
                 task=config["task"],
-                n_trials=config.get("n_trials", 50)
+                modelo=config["modelo"],  # pode ser "lightgbm", "mlp" ou "auto"
+                n_trials=config.get("n_trials", 30)
             )
 
-        # =========================
-        # Construção do modelo
-        # =========================
-        if config["modelo"] == "lightgbm":
+            # Se modo auto
+            if config["modelo"] == "auto":
+
+                modelo_final = resultado_otimizacao["melhor_modelo"]
+                best_params = resultado_otimizacao["resultado"]["best_params"]
+                best_cv_score = resultado_otimizacao["resultado"]["best_score"]
+
+            else:
+                best_params = resultado_otimizacao["best_params"]
+                best_cv_score = resultado_otimizacao["resultado"]["best_score"]
+
+        # ==========================================================
+        # 6. TREINO FINAL (SOMENTE TREINO)
+        # ==========================================================
+        if modelo_final == "lightgbm":
+
             model = ModelFactory.criar_lightgbm(
                 task=config["task"],
-                params=params
+                params=best_params
             )
 
-        elif config["modelo"] == "mlp":
-            input_dim = X_train.shape[1]
-            output_dim = 1
-            model = ModelFactory.criar_mlp(input_dim, output_dim)
+            model.fit(X_train, y_train)
+
+            y_pred = model.predict(X_test)
+
+        elif modelo_final == "mlp":
+
+            output_dim = 1 if config["task"] == "regression" else 1
+
+            model = ModelFactory.criar_mlp(
+                input_dim=input_dim,
+                output_dim=output_dim,
+                params=best_params
+            )
+
+            # Treino final completo (sem validação)
+            device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+            model.to(device)
+
+            X_t = torch.tensor(X_train, dtype=torch.float32).to(device)
+            y_t = torch.tensor(y_train, dtype=torch.float32).to(device)
+
+            optimizer = torch.optim.Adam(
+                model.parameters(),
+                lr=best_params.get("lr", 1e-3) if best_params else 1e-3
+            )
+
+            criterion = (
+                torch.nn.MSELoss()
+                if config["task"] == "regression"
+                else torch.nn.BCEWithLogitsLoss()
+            )
+
+            model.train()
+
+            for epoch in range(200):
+                optimizer.zero_grad()
+                outputs = model(X_t).squeeze()
+                loss = criterion(outputs, y_t)
+                loss.backward()
+                optimizer.step()
+
+            model.eval()
+
+            with torch.no_grad():
+                preds = model(
+                    torch.tensor(X_test, dtype=torch.float32).to(device)
+                ).cpu().numpy()
+
+            y_pred = preds.squeeze()
 
         else:
-            raise ValueError("Modelo não suportado.")
+            raise ValueError("Modelo final inválido.")
 
-        # =========================
-        # Treino
-        # =========================
-        model.fit(X_train, y_train)
-
-        # =========================
-        # Predição
-        # =========================
-        y_pred = model.predict(X_test)
-
-        # =========================
-        # Métricas
-        # =========================
+        # ==========================================================
+        # 7. MÉTRICAS (APENAS NO TESTE)
+        # ==========================================================
         if config["task"] == "regression":
             metricas = metricas_regressao(y_test, y_pred)
         else:
             metricas = metricas_classificacao(y_test, y_pred)
 
-        # =========================
-        # Registro na memória
-        # =========================
+        # ==========================================================
+        # 8. REGISTRO
+        # ==========================================================
         registrar_interacao(
             memoria=self.memoria,
             tipo="analise_dados",
@@ -622,15 +689,19 @@ TAREFAS:
             resposta=str(metricas),
             tema="análise de dados",
             artefatos={
-                "config": config,
-                "metricas": metricas
+                "metricas": metricas,
+                "best_params": best_params,
+                "modelo_final": modelo_final,
+                "metadata": pipeline.metadata
             }
         )
 
         salvar_memoria(self.memoria)
 
-        return metricas
-
-
-
-
+        return {
+            "metricas": metricas,
+            "best_params": best_params,
+            "best_cv_score": best_cv_score,
+            "modelo_final": modelo_final,
+            "metadata": pipeline.metadata
+        }
