@@ -1,0 +1,239 @@
+{
+  "target": "target",
+  "colunas_numericas": [
+    "x1",
+    "x2"
+  ],
+  "colunas_categoricas": [
+    "segmento",
+    "__scoreia_segment_bucket__"
+  ],
+  "feature_names_out": [
+    "x1",
+    "x2",
+    "segmento_A",
+    "segmento_B",
+    "segmento_C",
+    "__scoreia_segment_bucket___segmento=A",
+    "__scoreia_segment_bucket___segmento=B",
+    "__scoreia_segment_bucket___segmento=C"
+  ],
+  "postprocessor": {
+    "upstream": null,
+    "selected_feature_indices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7
+    ],
+    "feature_names_after_selection": [
+      "x1",
+      "x2",
+      "segmento_A",
+      "segmento_B",
+      "segmento_C",
+      "__scoreia_segment_bucket___segmento=A",
+      "__scoreia_segment_bucket___segmento=B",
+      "__scoreia_segment_bucket___segmento=C"
+    ],
+    "reduction": {
+      "enabled": false,
+      "requested_tail_features": 0,
+      "requested_tail_indices": [],
+      "variance_threshold": 0.7
+    },
+    "final_selected_feature_indices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7
+    ],
+    "feature_names_out": [
+      "x1",
+      "x2",
+      "segmento_A",
+      "segmento_B",
+      "segmento_C",
+      "__scoreia_segment_bucket___segmento=A",
+      "__scoreia_segment_bucket___segmento=B",
+      "__scoreia_segment_bucket___segmento=C"
+    ]
+  },
+  "metadata": {
+    "n_features": 8,
+    "n_numericas": 2,
+    "n_categoricas": 2,
+    "feature_names_out": [
+      "x1",
+      "x2",
+      "segmento_A",
+      "segmento_B",
+      "segmento_C",
+      "__scoreia_segment_bucket___segmento=A",
+      "__scoreia_segment_bucket___segmento=B",
+      "__scoreia_segment_bucket___segmento=C"
+    ],
+    "feature_order_model": [
+      "segmento",
+      "x1",
+      "x2",
+      "__scoreia_segment_bucket__"
+    ],
+    "aplicar_tratamento_missing": true,
+    "n_features_original": 8,
+    "n_features_selected": 8,
+    "selected_feature_names": [
+      "x1",
+      "x2",
+      "segmento_A",
+      "segmento_B",
+      "segmento_C",
+      "__scoreia_segment_bucket___segmento=A",
+      "__scoreia_segment_bucket___segmento=B",
+      "__scoreia_segment_bucket___segmento=C"
+    ],
+    "feature_selection_stability": {
+      "enabled": false,
+      "applied": false,
+      "reason": "disabled_by_config",
+      "n_features_original": 8,
+      "n_features_selected": 8,
+      "selected_feature_indices": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "selected_feature_names": [
+        "x1",
+        "x2",
+        "segmento_A",
+        "segmento_B",
+        "segmento_C",
+        "__scoreia_segment_bucket___segmento=A",
+        "__scoreia_segment_bucket___segmento=B",
+        "__scoreia_segment_bucket___segmento=C"
+      ],
+      "candidate_results": []
+    },
+    "feature_postprocessing_full": {
+      "upstream": null,
+      "selected_feature_indices": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "feature_names_after_selection": [
+        "x1",
+        "x2",
+        "segmento_A",
+        "segmento_B",
+        "segmento_C",
+        "__scoreia_segment_bucket___segmento=A",
+        "__scoreia_segment_bucket___segmento=B",
+        "__scoreia_segment_bucket___segmento=C"
+      ],
+      "reduction": {
+        "enabled": false,
+        "requested_tail_features": 0,
+        "requested_tail_indices": [],
+        "variance_threshold": 0.7
+      },
+      "final_selected_feature_indices": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "feature_names_out": [
+        "x1",
+        "x2",
+        "segmento_A",
+        "segmento_B",
+        "segmento_C",
+        "__scoreia_segment_bucket___segmento=A",
+        "__scoreia_segment_bucket___segmento=B",
+        "__scoreia_segment_bucket___segmento=C"
+      ]
+    },
+    "feature_postprocessing": {
+      "upstream": null,
+      "selected_feature_indices": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "feature_names_after_selection": [
+        "x1",
+        "x2",
+        "segmento_A",
+        "segmento_B",
+        "segmento_C",
+        "__scoreia_segment_bucket___segmento=A",
+        "__scoreia_segment_bucket___segmento=B",
+        "__scoreia_segment_bucket___segmento=C"
+      ],
+      "reduction": {
+        "enabled": false,
+        "requested_tail_features": 0,
+        "requested_tail_indices": [],
+        "variance_threshold": 0.7
+      },
+      "final_selected_feature_indices": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "feature_names_out": [
+        "x1",
+        "x2",
+        "segmento_A",
+        "segmento_B",
+        "segmento_C",
+        "__scoreia_segment_bucket___segmento=A",
+        "__scoreia_segment_bucket___segmento=B",
+        "__scoreia_segment_bucket___segmento=C"
+      ]
+    },
+    "model_stage": {
+      "stage_name": "model_full",
+      "source_stage_name": null,
+      "summary": {
+        "executed": true,
+        "method": "baseline_full",
+        "n_selected_features": 8
+      }
+    }
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "timestamp": "20260313191914",
+  "run_context": {
+    "timestamp": "20260313191914",
+    "run_id": "run_20260313191914"
+  },
+  "paths": {
+    "model": "artifacts\\ml\\run_20260313191914\\model_prunned\\model\\model_20260313191914.pt",
+    "preprocess": "artifacts\\ml\\run_20260313191914\\model_prunned\\preprocess\\pipeline_20260313191914.joblib",
+    "model_metadata": "artifacts\\ml\\run_20260313191914\\model_prunned\\metadata\\model_metadata_20260313191914.json",
+    "train_config": "artifacts\\ml\\run_20260313191914\\model_prunned\\metadata\\train_config_20260313191914.json",
+    "metrics_train": "artifacts\\ml\\run_20260313191914\\model_prunned\\metadata\\metrics_train_20260313191914.json",
+    "metrics_test": "artifacts\\ml\\run_20260313191914\\model_prunned\\metadata\\metrics_test_20260313191914.json",
+    "feature_schema": "artifacts\\ml\\run_20260313191914\\model_prunned\\metadata\\feature_schema_20260313191914.json",
+    "optuna_summary": "artifacts\\ml\\run_20260313191914\\model_prunned\\metadata\\optuna_summary_20260313191914.json",
+    "versions": "artifacts\\ml\\run_20260313191914\\model_prunned\\metadata\\versions_20260313191914.json",
+    "inference_script": "artifacts\\ml\\run_20260313191914\\model_prunned\\inference\\predict_20260313191914.py",
+    "inference_readme": "artifacts\\ml\\run_20260313191914\\model_prunned\\inference\\inference_readme_20260313191914.txt",
+    "artifact_hashes": "artifacts\\ml\\run_20260313191914\\model_prunned\\metadata\\artifact_hashes_20260313191914.json",
+    "interpretability_report": "artifacts\\ml\\run_20260313191914\\model_prunned\\reports\\interpretability_20260313191914.json",
+    "report_html": "artifacts\\ml\\run_20260313191914\\model_prunned\\reports\\report_20260313191914.html",
+    "scored_dataset": "artifacts\\ml\\run_20260313191914\\model_prunned\\scored_data\\scored_dataset_20260313191914.csv"
+  },
+  "integrity": {
+    "algorithm": "sha256",
+    "bundle_signature_sha256": "0aa403967e9702d6f2b10dad0db8f9cf9da36e9ab20383642e084a360207974c",
+    "artifacts_count": 14
+  }
+}

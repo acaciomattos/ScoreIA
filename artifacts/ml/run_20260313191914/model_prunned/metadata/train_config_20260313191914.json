@@ -1,0 +1,36 @@
+{
+  "config": {
+    "caminho": "C:\\Users\\acaci\\Documents\\scoreIA\\ScoreIA\\artifacts\\ml\\web_uploads\\web_upload_20260313191816_ba1cac66.csv",
+    "formato": "csv",
+    "target": "target",
+    "task": "classification",
+    "modelo": "auto",
+    "otimizar": true,
+    "n_trials": 40,
+    "early_stopping_rounds": 30,
+    "apply_missing_treatment": true,
+    "prune_best_model": true,
+    "prune_importance_cutoff_pct": 95.0,
+    "reduce_tail_features": true,
+    "reduction_tail_features_count": 5,
+    "reduction_variance_threshold": 0.7,
+    "temporal_feature": "temporal_month",
+    "segment_features": [],
+    "segment_strategy": "global",
+    "oot_months": 3,
+    "stability_feature_selection": true,
+    "stability_max_folds": 6,
+    "stability_max_candidates": 8,
+    "stability_perf_rel_tolerance": 0.05,
+    "stability_perf_abs_tolerance": null,
+    "stability_importance_cutoff_pct": 90.0,
+    "classification_balance_strategy": "none",
+    "positive_class_weight": null,
+    "model_stage_name": "model_prunned",
+    "source_stage_name": "model_full"
+  },
+  "run_context": {
+    "timestamp": "20260313191914",
+    "run_id": "run_20260313191914"
+  }
+}

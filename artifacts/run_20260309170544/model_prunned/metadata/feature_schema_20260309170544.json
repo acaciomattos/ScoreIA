@@ -1,0 +1,570 @@
+{
+  "target": "target",
+  "colunas_numericas": [
+    "x1",
+    "x2"
+  ],
+  "colunas_categoricas": [
+    "segmento",
+    "__scoreia_segment_bucket__"
+  ],
+  "feature_names_out": [
+    "x1",
+    "x2",
+    "segmento_A",
+    "segmento_B",
+    "segmento_C",
+    "__scoreia_segment_bucket___segmento=A",
+    "__scoreia_segment_bucket___segmento=B",
+    "__scoreia_segment_bucket___segmento=C"
+  ],
+  "postprocessor": {
+    "upstream": {
+      "upstream": null,
+      "selected_feature_indices": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "feature_names_after_selection": [
+        "x1",
+        "x2",
+        "segmento_A",
+        "segmento_B",
+        "segmento_C",
+        "__scoreia_segment_bucket___segmento=A",
+        "__scoreia_segment_bucket___segmento=B",
+        "__scoreia_segment_bucket___segmento=C"
+      ],
+      "reduction": {
+        "enabled": false,
+        "requested_tail_features": 0,
+        "requested_tail_indices": [],
+        "variance_threshold": 0.7
+      },
+      "final_selected_feature_indices": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "feature_names_out": [
+        "x1",
+        "x2",
+        "segmento_A",
+        "segmento_B",
+        "segmento_C",
+        "__scoreia_segment_bucket___segmento=A",
+        "__scoreia_segment_bucket___segmento=B",
+        "__scoreia_segment_bucket___segmento=C"
+      ]
+    },
+    "selected_feature_indices": [
+      1,
+      0
+    ],
+    "feature_names_after_selection": [
+      "x2",
+      "x1"
+    ],
+    "reduction": {
+      "enabled": false,
+      "requested_tail_features": 0,
+      "requested_tail_indices": [],
+      "variance_threshold": 0.7
+    },
+    "final_selected_feature_indices": [
+      0,
+      1
+    ],
+    "feature_names_out": [
+      "x2",
+      "x1"
+    ]
+  },
+  "metadata": {
+    "n_features": 8,
+    "n_numericas": 2,
+    "n_categoricas": 2,
+    "feature_names_out": [
+      "x1",
+      "x2",
+      "segmento_A",
+      "segmento_B",
+      "segmento_C",
+      "__scoreia_segment_bucket___segmento=A",
+      "__scoreia_segment_bucket___segmento=B",
+      "__scoreia_segment_bucket___segmento=C"
+    ],
+    "feature_order_model": [
+      "segmento",
+      "x1",
+      "x2",
+      "__scoreia_segment_bucket__"
+    ],
+    "aplicar_tratamento_missing": true,
+    "n_features_original": 8,
+    "n_features_selected": 8,
+    "selected_feature_names": [
+      "x1",
+      "x2",
+      "segmento_A",
+      "segmento_B",
+      "segmento_C",
+      "__scoreia_segment_bucket___segmento=A",
+      "__scoreia_segment_bucket___segmento=B",
+      "__scoreia_segment_bucket___segmento=C"
+    ],
+    "feature_selection_stability": {
+      "enabled": true,
+      "applied": false,
+      "reason": "no_reduction_after_selection",
+      "selection_rule": "Choose candidates near best mean score (within tolerance), then minimize dispersion (std, cv), then prefer fewer features.",
+      "selector_model": "lightgbm",
+      "metric_key": "auc",
+      "direction": "maximize",
+      "importance_cumulative_cutoff": 0.8,
+      "best_mean_score": 0.4869871437853894,
+      "performance_rel_tolerance": 0.05,
+      "performance_abs_tolerance": 0.002,
+      "n_features_original": 8,
+      "n_features_selected": 8,
+      "selected_feature_indices": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "selected_feature_names": [
+        "x1",
+        "x2",
+        "segmento_A",
+        "segmento_B",
+        "segmento_C",
+        "__scoreia_segment_bucket___segmento=A",
+        "__scoreia_segment_bucket___segmento=B",
+        "__scoreia_segment_bucket___segmento=C"
+      ],
+      "stable_importance_core": {
+        "accepted_folds": 0,
+        "fold_diagnostics": [
+          {
+            "fold_id": 1,
+            "train_months": [
+              "202401",
+              "202402",
+              "202403"
+            ],
+            "val_month": "202404",
+            "n_train": 99,
+            "n_val": 30,
+            "train_score": 0.6680995475113122,
+            "val_score": 0.4652777777777778,
+            "performance_gap": 0.20282176973353438,
+            "performance_gap_tolerance": 0.03340497737556561,
+            "accepted_for_intersection": false,
+            "selected_feature_indices_by_importance": [
+              0,
+              1,
+              2
+            ],
+            "selected_feature_importance_details": [
+              {
+                "feature_index": 0,
+                "importance": 2.0,
+                "importance_share": 0.4,
+                "importance_cumulative_share": 0.4
+              },
+              {
+                "feature_index": 1,
+                "importance": 1.0,
+                "importance_share": 0.2,
+                "importance_cumulative_share": 0.6000000000000001
+              },
+              {
+                "feature_index": 2,
+                "importance": 1.0,
+                "importance_share": 0.2,
+                "importance_cumulative_share": 0.8
+              }
+            ]
+          },
+          {
+            "fold_id": 2,
+            "train_months": [
+              "202401",
+              "202402",
+              "202403",
+              "202404"
+            ],
+            "val_month": "202405",
+            "n_train": 129,
+            "n_val": 33,
+            "train_score": 0.6661516853932584,
+            "val_score": 0.5263157894736843,
+            "performance_gap": 0.13983589591957413,
+            "performance_gap_tolerance": 0.033307584269662925,
+            "accepted_for_intersection": false,
+            "selected_feature_indices_by_importance": [
+              0
+            ],
+            "selected_feature_importance_details": [
+              {
+                "feature_index": 0,
+                "importance": 9.0,
+                "importance_share": 0.8181818181818182,
+                "importance_cumulative_share": 0.8181818181818182
+              }
+            ]
+          },
+          {
+            "fold_id": 3,
+            "train_months": [
+              "202401",
+              "202402",
+              "202403",
+              "202404",
+              "202405"
+            ],
+            "val_month": "202406",
+            "n_train": 162,
+            "n_val": 30,
+            "train_score": 0.6700102880658436,
+            "val_score": 0.5069444444444444,
+            "performance_gap": 0.1630658436213992,
+            "performance_gap_tolerance": 0.03350051440329218,
+            "accepted_for_intersection": false,
+            "selected_feature_indices_by_importance": [
+              0
+            ],
+            "selected_feature_importance_details": [
+              {
+                "feature_index": 0,
+                "importance": 6.0,
+                "importance_share": 1.0,
+                "importance_cumulative_share": 1.0
+              }
+            ]
+          }
+        ],
+        "stable_intersection_feature_indices": []
+      },
+      "stable_core_fallback_used": true,
+      "candidate_results": [
+        {
+          "top_k": 8,
+          "n_features": 8,
+          "feature_indices": [
+            0,
+            1,
+            4,
+            2,
+            3,
+            5,
+            7,
+            6
+          ],
+          "feature_names": [
+            "x1",
+            "x2",
+            "segmento_C",
+            "segmento_A",
+            "segmento_B",
+            "__scoreia_segment_bucket___segmento=A",
+            "__scoreia_segment_bucket___segmento=C",
+            "__scoreia_segment_bucket___segmento=B"
+          ],
+          "scores": [
+            0.4722222222222222,
+            0.45864661654135336,
+            0.5300925925925926
+          ],
+          "n_folds_valid": 3,
+          "mean": 0.4869871437853894,
+          "std": 0.030979929578717258,
+          "min": 0.45864661654135336,
+          "max": 0.5300925925925926,
+          "range": 0.0714459760512392,
+          "cv": 0.06361549780933479,
+          "performance_gap_to_best": 0.0,
+          "performance_close_to_best": true,
+          "selected": true
+        }
+      ],
+      "temporal_cv": {
+        "n_samples": 192,
+        "n_months": 6,
+        "months": [
+          "202401",
+          "202402",
+          "202403",
+          "202404",
+          "202405",
+          "202406"
+        ],
+        "n_folds": 3,
+        "folds": [
+          {
+            "fold_id": 1,
+            "train_months": [
+              "202401",
+              "202402",
+              "202403"
+            ],
+            "val_month": "202404",
+            "n_train": 99,
+            "n_val": 30
+          },
+          {
+            "fold_id": 2,
+            "train_months": [
+              "202401",
+              "202402",
+              "202403",
+              "202404"
+            ],
+            "val_month": "202405",
+            "n_train": 129,
+            "n_val": 33
+          },
+          {
+            "fold_id": 3,
+            "train_months": [
+              "202401",
+              "202402",
+              "202403",
+              "202404",
+              "202405"
+            ],
+            "val_month": "202406",
+            "n_train": 162,
+            "n_val": 30
+          }
+        ]
+      }
+    },
+    "feature_postprocessing_full": {
+      "upstream": null,
+      "selected_feature_indices": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "feature_names_after_selection": [
+        "x1",
+        "x2",
+        "segmento_A",
+        "segmento_B",
+        "segmento_C",
+        "__scoreia_segment_bucket___segmento=A",
+        "__scoreia_segment_bucket___segmento=B",
+        "__scoreia_segment_bucket___segmento=C"
+      ],
+      "reduction": {
+        "enabled": false,
+        "requested_tail_features": 0,
+        "requested_tail_indices": [],
+        "variance_threshold": 0.7
+      },
+      "final_selected_feature_indices": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "feature_names_out": [
+        "x1",
+        "x2",
+        "segmento_A",
+        "segmento_B",
+        "segmento_C",
+        "__scoreia_segment_bucket___segmento=A",
+        "__scoreia_segment_bucket___segmento=B",
+        "__scoreia_segment_bucket___segmento=C"
+      ]
+    },
+    "feature_postprocessing": {
+      "upstream": {
+        "upstream": null,
+        "selected_feature_indices": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "feature_names_after_selection": [
+          "x1",
+          "x2",
+          "segmento_A",
+          "segmento_B",
+          "segmento_C",
+          "__scoreia_segment_bucket___segmento=A",
+          "__scoreia_segment_bucket___segmento=B",
+          "__scoreia_segment_bucket___segmento=C"
+        ],
+        "reduction": {
+          "enabled": false,
+          "requested_tail_features": 0,
+          "requested_tail_indices": [],
+          "variance_threshold": 0.7
+        },
+        "final_selected_feature_indices": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "feature_names_out": [
+          "x1",
+          "x2",
+          "segmento_A",
+          "segmento_B",
+          "segmento_C",
+          "__scoreia_segment_bucket___segmento=A",
+          "__scoreia_segment_bucket___segmento=B",
+          "__scoreia_segment_bucket___segmento=C"
+        ]
+      },
+      "selected_feature_indices": [
+        1,
+        0
+      ],
+      "feature_names_after_selection": [
+        "x2",
+        "x1"
+      ],
+      "reduction": {
+        "enabled": false,
+        "requested_tail_features": 0,
+        "requested_tail_indices": [],
+        "variance_threshold": 0.7
+      },
+      "final_selected_feature_indices": [
+        0,
+        1
+      ],
+      "feature_names_out": [
+        "x2",
+        "x1"
+      ]
+    },
+    "model_stage": {
+      "stage_name": "model_prunned",
+      "source_stage_name": "model_full",
+      "summary": {
+        "executed": true,
+        "method": "cumulative_importance_cutoff",
+        "source_stage": "model_full",
+        "cutoff_pct": 95.0,
+        "n_source_features": 8,
+        "n_selected_features": 2,
+        "selected_feature_indices": [
+          1,
+          0
+        ],
+        "selected_feature_names": [
+          "x2",
+          "x1"
+        ],
+        "importance_profile": {
+          "ranking": {
+            "ranked_indices": [
+              1,
+              0,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7
+            ],
+            "importances": [
+              48.0,
+              52.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0
+            ]
+          },
+          "active_feature_indices": [
+            1,
+            0
+          ],
+          "active_feature_names": [
+            "x2",
+            "x1"
+          ],
+          "selected_feature_indices": [
+            1,
+            0
+          ],
+          "selected_feature_names": [
+            "x2",
+            "x1"
+          ],
+          "tail_feature_indices": [],
+          "tail_feature_names": [],
+          "n_input_features": 8,
+          "n_active_features": 2,
+          "n_selected_features": 2,
+          "cutoff_pct": 95.0,
+          "importance_rows": [
+            {
+              "rank": 1,
+              "feature_index": 1,
+              "feature_name": "x2",
+              "importance_raw": 52.0,
+              "importance_mass": 52.0,
+              "importance_share": 0.52,
+              "importance_cumulative_share": 0.52,
+              "selected_by_cutoff": true
+            },
+            {
+              "rank": 2,
+              "feature_index": 0,
+              "feature_name": "x1",
+              "importance_raw": 48.0,
+              "importance_mass": 48.0,
+              "importance_share": 0.48,
+              "importance_cumulative_share": 1.0,
+              "selected_by_cutoff": true
+            }
+          ]
+        }
+      }
+    }
+  }
+}
