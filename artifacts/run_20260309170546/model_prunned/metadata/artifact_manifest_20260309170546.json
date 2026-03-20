@@ -1,0 +1,29 @@
+{
+  "timestamp": "20260309170546",
+  "run_context": {
+    "timestamp": "20260309170546",
+    "run_id": "run_20260309170546"
+  },
+  "paths": {
+    "model": "artifacts\\run_20260309170546\\model_prunned\\model\\model_20260309170546.joblib",
+    "preprocess": "artifacts\\run_20260309170546\\model_prunned\\preprocess\\pipeline_20260309170546.joblib",
+    "model_metadata": "artifacts\\run_20260309170546\\model_prunned\\metadata\\model_metadata_20260309170546.json",
+    "train_config": "artifacts\\run_20260309170546\\model_prunned\\metadata\\train_config_20260309170546.json",
+    "metrics_train": "artifacts\\run_20260309170546\\model_prunned\\metadata\\metrics_train_20260309170546.json",
+    "metrics_test": "artifacts\\run_20260309170546\\model_prunned\\metadata\\metrics_test_20260309170546.json",
+    "feature_schema": "artifacts\\run_20260309170546\\model_prunned\\metadata\\feature_schema_20260309170546.json",
+    "optuna_summary": "artifacts\\run_20260309170546\\model_prunned\\metadata\\optuna_summary_20260309170546.json",
+    "versions": "artifacts\\run_20260309170546\\model_prunned\\metadata\\versions_20260309170546.json",
+    "inference_script": "artifacts\\run_20260309170546\\model_prunned\\inference\\predict_20260309170546.py",
+    "inference_readme": "artifacts\\run_20260309170546\\model_prunned\\inference\\inference_readme_20260309170546.txt",
+    "artifact_hashes": "artifacts\\run_20260309170546\\model_prunned\\metadata\\artifact_hashes_20260309170546.json",
+    "interpretability_report": "artifacts\\run_20260309170546\\model_prunned\\reports\\interpretability_20260309170546.json",
+    "report_html": "artifacts\\run_20260309170546\\model_prunned\\reports\\report_20260309170546.html",
+    "scored_dataset": "artifacts\\run_20260309170546\\model_prunned\\scored_data\\scored_dataset_20260309170546.csv"
+  },
+  "integrity": {
+    "algorithm": "sha256",
+    "bundle_signature_sha256": "0ef4239b79f41cdfce1b3a1deeb1b4798a97e3dd0dda010a990127dbad6277c8",
+    "artifacts_count": 14
+  }
+}

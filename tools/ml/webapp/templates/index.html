@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ScoreIA - Pipeline de ML</title>
+    <style>
+        body {
+            font-family: "Segoe UI", Tahoma, sans-serif;
+            margin: 24px;
+            color: #1f2937;
+            background: #f8fafc;
+        }
+        h2 {
+            margin-top: 0;
+        }
+        h3 {
+            margin: 0 0 10px;
+            font-size: 16px;
+        }
+        .card {
+            background: #ffffff;
+            border: 1px solid #dbeafe;
+            border-radius: 10px;
+            padding: 18px;
+            max-width: 1180px;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 12px;
+        }
+        label {
+            display: block;
+            font-size: 14px;
+            margin-bottom: 4px;
+            color: #334155;
+        }
+        input[type="text"], input[type="number"], select {
+            width: 100%;
+            box-sizing: border-box;
+            padding: 8px;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            background: #fff;
+        }
+        input[type="checkbox"] {
+            transform: translateY(1px);
+        }
+        .help {
+            margin-top: 4px;
+            color: #64748b;
+            font-size: 12px;
+            line-height: 1.35;
+        }
+        .dataset-status {
+            margin-top: 8px;
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid #bfdbfe;
+            background: #eff6ff;
+            color: #1e3a8a;
+            font-size: 13px;
+            line-height: 1.4;
+        }
+        .dataset-status-empty {
+            border-style: dashed;
+            border-color: #cbd5e1;
+            background: #f8fafc;
+            color: #64748b;
+        }
+        .section {
+            margin-top: 16px;
+            padding: 14px;
+            border: 1px solid #dbeafe;
+            border-radius: 8px;
+            background: #f8fbff;
+        }
+        .segments {
+            margin-top: 8px;
+            border: 1px dashed #cbd5e1;
+            padding: 10px;
+            border-radius: 8px;
+            background: #fff;
+        }
+        .segment-row {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+        .segment-row input {
+            flex: 1;
+        }
+        .btn {
+            border: 1px solid #2563eb;
+            background: #2563eb;
+            color: #fff;
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+        .btn-secondary {
+            border: 1px solid #94a3b8;
+            background: #fff;
+            color: #334155;
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+        .actions {
+            margin-top: 14px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .btn[disabled], .btn-secondary[disabled] {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        .result {
+            margin-top: 16px;
+            background: #f1f5f9;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            padding: 12px;
+        }
+        .alert {
+            margin-top: 12px;
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+        .alert-error {
+            background: #fef2f2;
+            border-color: #fecaca;
+            color: #991b1b;
+        }
+        .alert-info {
+            background: #eff6ff;
+            border-color: #bfdbfe;
+            color: #1e3a8a;
+        }
+        .inline-check {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            margin-top: 20px;
+        }
+        code {
+            background: #e2e8f0;
+            padding: 2px 4px;
+            border-radius: 4px;
+            word-break: break-all;
+        }
+        .loading {
+            display: none;
+            margin-top: 14px;
+            padding: 12px;
+            border: 1px solid #bfdbfe;
+            background: #eff6ff;
+            border-radius: 8px;
+            color: #1e3a8a;
+            align-items: center;
+            gap: 10px;
+        }
+        .spinner {
+            width: 16px;
+            height: 16px;
+            border: 2px solid #bfdbfe;
+            border-top-color: #2563eb;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <h2>ScoreIA - Pipeline de ML</h2>
+    <div class="card">
+        <form method="post" enctype="multipart/form-data" id="scoreia-form">
+            <input type="hidden" name="form_action" id="form_action" value="train_pipeline">
+            <input type="hidden" name="persisted_dataset_path" id="persisted_dataset_path" value="{{ persisted_dataset_path or (config_enviada.persisted_dataset_path if config_enviada else '') }}">
+            <input type="hidden" name="persisted_dataset_name" id="persisted_dataset_name" value="{{ persisted_dataset_name or (config_enviada.persisted_dataset_name if config_enviada else '') }}">
+
+            <div class="section">
+                <h3>Dataset</h3>
+                <div class="grid">
+                    <div>
+                        <label>Arquivo de dados</label>
+                        <input type="file" name="file" id="dataset_file_input">
+                        <div class="help">Se um dataset ja estiver persistido, o upload pode ser omitido.</div>
+                        {% set dataset_name = persisted_dataset_name or (config_enviada.persisted_dataset_name if config_enviada else '') %}
+                        <div
+                            class="dataset-status {% if not dataset_name %}dataset-status-empty{% endif %}"
+                            id="dataset-status"
+                        >
+                            {% if dataset_name %}
+                            Dataset carregado para reutilizacao: <code>{{ dataset_name }}</code>
+                            {% else %}
+                            Nenhum dataset persistido no momento.
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div>
+                        <label>Formato</label>
+                        <select name="formato">
+                            <option value="csv" {% if not config_enviada or config_enviada.formato == 'csv' %}selected{% endif %}>CSV</option>
+                            <option value="parquet" {% if config_enviada and config_enviada.formato == 'parquet' %}selected{% endif %}>Parquet</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label>Target</label>
+                        <input type="text" name="target" value="{{ (config_enviada.target if config_enviada else '') }}">
+                        <div class="help">Obrigatorio apenas no treino do pipeline.</div>
+                    </div>
+                    <div>
+                        <label>Task</label>
+                        <select name="task">
+                            <option value="regression" {% if config_enviada and config_enviada.task == 'regression' %}selected{% endif %}>Regressao</option>
+                            <option value="classification" {% if not config_enviada or config_enviada.task == 'classification' %}selected{% endif %}>Classificacao</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section">
+                <h3>Separacao Temporal e Segmentacao</h3>
+                <div class="grid">
+                    <div>
+                        <label>Feature temporal (date/data)</label>
+                        <input type="text" name="temporal_feature" id="temporal_feature" placeholder="ex.: dt_referencia" value="{{ (config_enviada.temporal_feature if config_enviada else '') }}">
+                        <div class="help">Formato obrigatorio da coluna no dataset: <code>YYYYMMDD</code> ou <code>YYYYMM</code>.</div>
+                    </div>
+                    <div id="oot-field" style="display: {% if show_oot_field or (config_enviada and config_enviada.temporal_feature) %}block{% else %}none{% endif %};">
+                        <label>Meses reservados para OOT</label>
+                        <input type="number" name="oot_months" min="1" value="{{ (config_enviada.oot_months if config_enviada else '') }}" placeholder="ex.: 2">
+                        <div class="help">OOT usa sempre os meses mais recentes definidos aqui.</div>
+                    </div>
+                </div>
+
+                <div class="segments">
+                    <label>Features de segmentacao</label>
+                    <div id="segments-container">
+                        {% if config_enviada and config_enviada.segment_features %}
+                            {% for seg in config_enviada.segment_features %}
+                            <div class="segment-row">
+                                <input type="text" name="segment_features[]" value="{{ seg }}" placeholder="Segmento {{ loop.index }} (opcional)">
+                                {% if not loop.first %}
+                                <button type="button" class="btn-secondary remove-segment">remover</button>
+                                {% endif %}
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                        <div class="segment-row">
+                            <input type="text" name="segment_features[]" placeholder="Segmento 1 (opcional)">
+                        </div>
+                        {% endif %}
+                    </div>
+                    <button type="button" class="btn-secondary" id="add-segment">+ adicionar outro segmento</button>
+                </div>
+            </div>
+
+            <div class="section">
+                <h3>Treino e Otimizacao</h3>
+                <div class="grid">
+                    <div>
+                        <label>Modelo</label>
+                        <select name="modelo">
+                            <option value="lightgbm" {% if not config_enviada or config_enviada.modelo == 'lightgbm' %}selected{% endif %}>LightGBM</option>
+                            <option value="mlp" {% if config_enviada and config_enviada.modelo == 'mlp' %}selected{% endif %}>MLP</option>
+                            <option value="auto" {% if config_enviada and config_enviada.modelo == 'auto' %}selected{% endif %}>Auto (LightGBM/MLP)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label>n_trials (Optuna)</label>
+                        <input type="number" name="n_trials" value="{{ (config_enviada.n_trials if config_enviada else 30) }}" min="1">
+                    </div>
+                    <div>
+                        <label>early_stopping_rounds (CV/Optuna)</label>
+                        <input type="number" name="early_stopping_rounds" value="{{ (config_enviada.early_stopping_rounds if config_enviada else 20) }}" min="1">
+                    </div>
+                    <div class="inline-check">
+                        <input type="checkbox" name="apply_missing_treatment" id="apply_missing_treatment" {% if not config_enviada or config_enviada.apply_missing_treatment %}checked{% endif %}>
+                        <label for="apply_missing_treatment" style="margin: 0;">Aplicar tratamento de missings</label>
+                    </div>
+                    <div class="inline-check">
+                        <input type="checkbox" name="otimizar" id="otimizar" {% if not config_enviada or config_enviada.otimizar %}checked{% endif %}>
+                        <label for="otimizar" style="margin: 0;">Otimizar hiperparametros</label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section">
+                <h3>Reducao de Dimensionalidade e Pruning</h3>
+                <div class="grid">
+                    <div class="inline-check">
+                        <input type="checkbox" name="prune_best_model" id="prune_best_model" {% if config_enviada and config_enviada.prune_best_model %}checked{% endif %}>
+                        <label for="prune_best_model" style="margin: 0;">Executar pruning recursivo</label>
+                    </div>
+                    <div class="inline-check">
+                        <input type="checkbox" name="reduce_tail_features" id="reduce_tail_features" {% if config_enviada and config_enviada.reduce_tail_features %}checked{% endif %}>
+                        <label for="reduce_tail_features" style="margin: 0;">Executar reducao PCA na cauda</label>
+                    </div>
+                    <div>
+                        <label>Corte acumulado de importancia para pruning (%)</label>
+                        <input type="number" name="prune_importance_cutoff_pct" min="1" max="100" step="1" value="{{ (config_enviada.prune_importance_cutoff_pct if config_enviada else 80) }}">
+                        <div class="help">Apos o primeiro modelo final, reotimiza usando apenas as features que acumulam esse percentual de importancia.</div>
+                    </div>
+                    <div>
+                        <label>Y variaveis menos importantes</label>
+                        <input type="number" name="reduction_tail_features_count" min="2" value="{{ (config_enviada.reduction_tail_features_count if config_enviada else 10) }}">
+                        <div class="help">Depois do pruning opcional, as Y menos importantes sao substituidas por componentes principais que explicam pelo menos <code>70%</code> da variabilidade.</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section">
+                <h3>Feature Selection Temporal</h3>
+                <div class="inline-check">
+                    <input type="checkbox" name="stability_feature_selection" id="stability_feature_selection" {% if not config_enviada or config_enviada.stability_feature_selection %}checked{% endif %}>
+                    <label for="stability_feature_selection" style="margin: 0;">Executar feature selection temporal</label>
+                </div>
+
+                <div id="stability-section" style="display: {% if not config_enviada or config_enviada.stability_feature_selection %}block{% else %}none{% endif %};">
+                    <div class="grid" style="margin-top: 12px;">
+                        <div>
+                            <label>stability_max_folds</label>
+                            <input
+                                type="number"
+                                name="stability_max_folds"
+                                min="{{ stability_fold_bounds.min if stability_fold_bounds else 2 }}"
+                                {% if stability_fold_bounds %}max="{{ stability_fold_bounds.max }}"{% endif %}
+                                value="{{ (config_enviada.stability_max_folds if config_enviada and config_enviada.stability_max_folds != '' else (stability_fold_bounds.default if stability_fold_bounds else '')) }}"
+                            >
+                            <div class="help">
+                                {% if stability_fold_bounds %}
+                                Limite atual: <code>{{ stability_fold_bounds.min }}</code> a <code>{{ stability_fold_bounds.max }}</code> folds, considerando <code>{{ stability_fold_bounds.n_months_in_time }}</code> meses in-time.
+                                {% else %}
+                                O limite sera calculado apos validar a feature temporal e o numero de meses OOT.
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div>
+                            <label>stability_max_candidates</label>
+                            <input type="number" name="stability_max_candidates" min="1" value="{{ (config_enviada.stability_max_candidates if config_enviada else 8) }}">
+                        </div>
+                        <div>
+                            <label>performance_rel_tolerance</label>
+                            <input type="number" step="0.001" min="0" name="stability_perf_rel_tolerance" value="{{ (config_enviada.stability_perf_rel_tolerance if config_enviada else 0.05) }}">
+                            <div class="help">Default atual: <code>0.05</code>.</div>
+                        </div>
+                        <div>
+                            <label>performance_abs_tolerance</label>
+                            <input type="number" step="0.0001" min="0" name="stability_perf_abs_tolerance" value="{{ (config_enviada.stability_perf_abs_tolerance if config_enviada else '') }}">
+                        </div>
+                        <div>
+                            <label>Corte acumulado de importancia (%)</label>
+                            <input type="number" step="1" min="1" max="100" name="stability_importance_cutoff_pct" value="{{ (config_enviada.stability_importance_cutoff_pct if config_enviada else 80) }}">
+                            <div class="help">Ex.: <code>80</code> para manter features que acumulam 80% da importancia relativa por fold estavel.</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section">
+                <h3>Segmentacao Avancada</h3>
+                <div class="grid">
+                    <div>
+                        <label>Estrategia de segmentacao</label>
+                        <select name="segment_strategy">
+                            <option value="global" {% if not config_enviada or config_enviada.segment_strategy == 'global' %}selected{% endif %}>Modelo global</option>
+                            <option value="bucket_feature" {% if config_enviada and config_enviada.segment_strategy == 'bucket_feature' %}selected{% endif %}>Forcar bucket de segmento</option>
+                            <option value="per_bucket_model" {% if config_enviada and config_enviada.segment_strategy == 'per_bucket_model' %}selected{% endif %}>Um modelo por bucket</option>
+                        </select>
+                        <div class="help">No modo por bucket, o treino final usa um LightGBM por combinacao de segmentos e fallback global para buckets insuficientes.</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section">
+                <h3>Balanceamento da Classificacao</h3>
+                <div class="grid">
+                    <div>
+                        <label>Estrategia</label>
+                        <select name="classification_balance_strategy">
+                            <option value="none" {% if not config_enviada or config_enviada.classification_balance_strategy == 'none' %}selected{% endif %}>Sem balanceamento</option>
+                            <option value="class_weight" {% if config_enviada and config_enviada.classification_balance_strategy == 'class_weight' %}selected{% endif %}>Peso por classe</option>
+                            <option value="undersample" {% if config_enviada and config_enviada.classification_balance_strategy == 'undersample' %}selected{% endif %}>Undersampling</option>
+                            <option value="oversample" {% if config_enviada and config_enviada.classification_balance_strategy == 'oversample' %}selected{% endif %}>Oversampling</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label>Peso da classe positiva</label>
+                        <input type="number" name="positive_class_weight" min="0" step="0.1" value="{{ (config_enviada.positive_class_weight if config_enviada else '') }}">
+                        <div class="help">Usado apenas quando a estrategia for <code>Peso por classe</code>. Se vazio, calcula balanceado automaticamente.</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="actions">
+                <button class="btn-secondary" type="submit" name="submit_action" value="validate_only" data-action-button data-form-action="validate_only">Validar dataset</button>
+                <button class="btn" type="submit" name="submit_action" value="train_pipeline" data-action-button data-form-action="train_pipeline">Treinar modelo</button>
+            </div>
+        </form>
+
+        <div class="loading" id="loading-state">
+            <div class="spinner" aria-hidden="true"></div>
+            <div>Pipeline em execucao. Aguarde a conclusao antes de iniciar uma nova acao.</div>
+        </div>
+
+        {% if persisted_dataset_path %}
+        <div class="alert alert-info">
+            Dataset persistido para reutilizacao: <code>{{ persisted_dataset_path }}</code>
+        </div>
+        {% endif %}
+
+        {% if erro_temporal %}
+        <div class="alert alert-error">{{ erro_temporal }}</div>
+        {% endif %}
+
+        {% if erro_execucao %}
+        <div class="alert alert-error">Erro durante execucao: {{ erro_execucao }}</div>
+        {% endif %}
+
+        {% if alerta_temporal %}
+        <div class="alert alert-info">{{ alerta_temporal }}</div>
+        {% endif %}
+
+        {% if temporal_validation and temporal_validation.valid %}
+        <div class="alert alert-info">
+            Validacao temporal ok. Meses distintos identificados: <code>{{ temporal_validation.n_months }}</code>.
+        </div>
+        {% endif %}
+
+        {% if resultado %}
+        <div class="result">
+            <strong>Execucao concluida</strong><br>
+            Estagio final: <code>{{ resultado.final_stage_name }}</code><br>
+            Modelo final: <code>{{ resultado.modelo_final }}</code><br>
+            Relatorio final: <code>{{ resultado.caminho_relatorio_html }}</code><br>
+            Interpretabilidade final: <code>{{ resultado.caminho_interpretabilidade }}</code><br>
+            Scored dataset final: <code>{{ resultado.caminho_dataset_scored }}</code><br><br>
+
+            {% if resultado.model_stage_outputs %}
+            <strong>Artefatos por estagio</strong><br>
+            {% for stage_name, stage in resultado.model_stage_outputs.items() %}
+            <code>{{ stage_name }}</code>: relatorio <code>{{ stage.caminho_relatorio_html }}</code>, interpretabilidade <code>{{ stage.caminho_interpretabilidade }}</code>, scored <code>{{ stage.caminho_dataset_scored }}</code><br>
+            {% endfor %}
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+
+    <script>
+        (function () {
+            const form = document.getElementById("scoreia-form");
+            const addBtn = document.getElementById("add-segment");
+            const container = document.getElementById("segments-container");
+            const temporalInput = document.getElementById("temporal_feature");
+            const ootField = document.getElementById("oot-field");
+            const stabilityCheckbox = document.getElementById("stability_feature_selection");
+            const stabilitySection = document.getElementById("stability-section");
+            const loadingState = document.getElementById("loading-state");
+            const actionButtons = document.querySelectorAll("[data-action-button]");
+            const formActionInput = document.getElementById("form_action");
+            const datasetFileInput = document.getElementById("dataset_file_input");
+            const persistedDatasetPathInput = document.getElementById("persisted_dataset_path");
+            const persistedDatasetNameInput = document.getElementById("persisted_dataset_name");
+            const datasetStatus = document.getElementById("dataset-status");
+
+            function setDatasetStatus(message, hasDataset) {
+                if (!datasetStatus) {
+                    return;
+                }
+                datasetStatus.innerHTML = message;
+                datasetStatus.classList.toggle("dataset-status-empty", !hasDataset);
+            }
+
+            function nextIndex() {
+                return container.querySelectorAll(".segment-row").length + 1;
+            }
+
+            function toggleOot() {
+                if (!temporalInput || !ootField) {
+                    return;
+                }
+                const enabled = (temporalInput.value || "").trim().length > 0;
+                ootField.style.display = enabled ? "block" : "none";
+            }
+
+            function toggleStabilitySection() {
+                if (!stabilityCheckbox || !stabilitySection || !temporalInput) {
+                    return;
+                }
+                const enabled = stabilityCheckbox.checked && (temporalInput.value || "").trim().length > 0;
+                stabilitySection.style.display = enabled ? "block" : "none";
+            }
+
+            addBtn.addEventListener("click", function () {
+                const row = document.createElement("div");
+                row.className = "segment-row";
+
+                const input = document.createElement("input");
+                input.type = "text";
+                input.name = "segment_features[]";
+                input.placeholder = `Segmento ${nextIndex()} (opcional)`;
+
+                const remove = document.createElement("button");
+                remove.type = "button";
+                remove.className = "btn-secondary";
+                remove.textContent = "remover";
+                remove.addEventListener("click", function () {
+                    row.remove();
+                });
+
+                row.appendChild(input);
+                row.appendChild(remove);
+                container.appendChild(row);
+            });
+
+            container.querySelectorAll(".remove-segment").forEach(function (btn) {
+                btn.addEventListener("click", function () {
+                    btn.parentElement.remove();
+                });
+            });
+
+            if (temporalInput) {
+                temporalInput.addEventListener("input", function () {
+                    toggleOot();
+                    toggleStabilitySection();
+                });
+                toggleOot();
+                toggleStabilitySection();
+            }
+
+            if (stabilityCheckbox) {
+                stabilityCheckbox.addEventListener("change", toggleStabilitySection);
+                toggleStabilitySection();
+            }
+
+            if (datasetFileInput) {
+                datasetFileInput.addEventListener("change", function () {
+                    const selectedFile = datasetFileInput.files && datasetFileInput.files[0];
+                    if (!selectedFile) {
+                        return;
+                    }
+                    if (persistedDatasetNameInput) {
+                        persistedDatasetNameInput.value = selectedFile.name;
+                    }
+                    if (persistedDatasetPathInput) {
+                        persistedDatasetPathInput.value = "";
+                    }
+                    setDatasetStatus(`Arquivo selecionado para envio: <code>${selectedFile.name}</code>`, true);
+                });
+            }
+
+            if (form) {
+                form.addEventListener("submit", function (event) {
+                    const submitter = event.submitter;
+                    if (formActionInput) {
+                        formActionInput.value = submitter?.dataset?.formAction || "train_pipeline";
+                    }
+                    actionButtons.forEach(function (btn) {
+                        btn.disabled = true;
+                    });
+                    if (loadingState) {
+                        loadingState.style.display = "flex";
+                    }
+                });
+            }
+        })();
+    </script>
+</body>
+</html>

@@ -1,0 +1,95 @@
+{
+  "timestamp": "20260309170544",
+  "task": "classification",
+  "modelo_final": "lightgbm",
+  "threshold_classificacao": 0.33886121627923266,
+  "best_params": {
+    "learning_rate": 0.0015649717986622417,
+    "num_leaves": 246,
+    "max_depth": 8,
+    "min_child_samples": 42,
+    "subsample": 0.9418862621562073,
+    "colsample_bytree": 0.994832349877985
+  },
+  "best_cv_score": 0.438407438715131,
+  "postprocessor": {
+    "upstream": {
+      "upstream": null,
+      "selected_feature_indices": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "feature_names_after_selection": [
+        "x1",
+        "x2",
+        "segmento_A",
+        "segmento_B",
+        "segmento_C",
+        "__scoreia_segment_bucket___segmento=A",
+        "__scoreia_segment_bucket___segmento=B",
+        "__scoreia_segment_bucket___segmento=C"
+      ],
+      "reduction": {
+        "enabled": false,
+        "requested_tail_features": 0,
+        "requested_tail_indices": [],
+        "variance_threshold": 0.7
+      },
+      "final_selected_feature_indices": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "feature_names_out": [
+        "x1",
+        "x2",
+        "segmento_A",
+        "segmento_B",
+        "segmento_C",
+        "__scoreia_segment_bucket___segmento=A",
+        "__scoreia_segment_bucket___segmento=B",
+        "__scoreia_segment_bucket___segmento=C"
+      ]
+    },
+    "selected_feature_indices": [
+      1,
+      0
+    ],
+    "feature_names_after_selection": [
+      "x2",
+      "x1"
+    ],
+    "reduction": {
+      "enabled": false,
+      "requested_tail_features": 0,
+      "requested_tail_indices": [],
+      "variance_threshold": 0.7
+    },
+    "final_selected_feature_indices": [
+      0,
+      1
+    ],
+    "feature_names_out": [
+      "x2",
+      "x1"
+    ]
+  },
+  "segment_features": [
+    "segmento"
+  ],
+  "segment_strategy": "global",
+  "model_kind": "lightgbm",
+  "input_dim": 2,
+  "output_dim": 1
+}

@@ -1,0 +1,29 @@
+{
+  "timestamp": "20260309183745",
+  "run_context": {
+    "timestamp": "20260309183745",
+    "run_id": "run_20260309183745"
+  },
+  "paths": {
+    "model": "artifacts\\run_20260309183745\\model_full\\model\\model_20260309183745.joblib",
+    "preprocess": "artifacts\\run_20260309183745\\model_full\\preprocess\\pipeline_20260309183745.joblib",
+    "model_metadata": "artifacts\\run_20260309183745\\model_full\\metadata\\model_metadata_20260309183745.json",
+    "train_config": "artifacts\\run_20260309183745\\model_full\\metadata\\train_config_20260309183745.json",
+    "metrics_train": "artifacts\\run_20260309183745\\model_full\\metadata\\metrics_train_20260309183745.json",
+    "metrics_test": "artifacts\\run_20260309183745\\model_full\\metadata\\metrics_test_20260309183745.json",
+    "feature_schema": "artifacts\\run_20260309183745\\model_full\\metadata\\feature_schema_20260309183745.json",
+    "optuna_summary": "artifacts\\run_20260309183745\\model_full\\metadata\\optuna_summary_20260309183745.json",
+    "versions": "artifacts\\run_20260309183745\\model_full\\metadata\\versions_20260309183745.json",
+    "inference_script": "artifacts\\run_20260309183745\\model_full\\inference\\predict_20260309183745.py",
+    "inference_readme": "artifacts\\run_20260309183745\\model_full\\inference\\inference_readme_20260309183745.txt",
+    "artifact_hashes": "artifacts\\run_20260309183745\\model_full\\metadata\\artifact_hashes_20260309183745.json",
+    "interpretability_report": "artifacts\\run_20260309183745\\model_full\\reports\\interpretability_20260309183745.json",
+    "report_html": "artifacts\\run_20260309183745\\model_full\\reports\\report_20260309183745.html",
+    "scored_dataset": "artifacts\\run_20260309183745\\model_full\\scored_data\\scored_dataset_20260309183745.csv"
+  },
+  "integrity": {
+    "algorithm": "sha256",
+    "bundle_signature_sha256": "9d41ea07b5236dbefe6f06e45a0b9bd9471b78fdb6923624d7d6baadf10bbdf7",
+    "artifacts_count": 14
+  }
+}

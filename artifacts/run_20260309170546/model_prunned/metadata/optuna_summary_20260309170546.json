@@ -1,0 +1,14 @@
+{
+  "executada": true,
+  "modo_auto": false,
+  "best_score": 0.5,
+  "best_params": {
+    "learning_rate": 0.0032982516643962315,
+    "num_leaves": 83,
+    "max_depth": 10,
+    "min_child_samples": 89,
+    "subsample": 0.9331353939335998,
+    "colsample_bytree": 0.6268399672458467
+  },
+  "n_trials": 1
+}

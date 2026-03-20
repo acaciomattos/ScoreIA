@@ -1,0 +1,37 @@
+{
+  "config": {
+    "caminho": "tmp_smoke_phase55_temporal.csv",
+    "formato": "csv",
+    "target": "target",
+    "task": "classification",
+    "modelo": "lightgbm",
+    "otimizar": false,
+    "early_stopping_rounds": 20,
+    "apply_missing_treatment": true,
+    "temporal_feature": "dt_ref",
+    "segment_features": [
+      "segmento"
+    ],
+    "segment_strategy": "global",
+    "oot_months": 2,
+    "stability_feature_selection": true,
+    "stability_max_folds": 3,
+    "stability_max_candidates": 4,
+    "stability_perf_rel_tolerance": 0.05,
+    "stability_perf_abs_tolerance": null,
+    "stability_importance_cutoff_pct": 80.0,
+    "classification_balance_strategy": "none",
+    "positive_class_weight": null,
+    "prune_best_model": false,
+    "prune_importance_cutoff_pct": 80.0,
+    "reduce_tail_features": false,
+    "reduction_tail_features_count": 0,
+    "reduction_variance_threshold": 0.7,
+    "model_stage_name": "model_full",
+    "source_stage_name": null
+  },
+  "run_context": {
+    "timestamp": "20260309183745",
+    "run_id": "run_20260309183745"
+  }
+}

@@ -15,6 +15,7 @@ downloads/
 eggs/
 .eggs/
 lib/
+Lib/
 lib64/
 parts/
 sdist/
@@ -138,6 +139,8 @@ celerybeat.pid
 .env
 .envrc
 .venv
+.venv310
+.venv312
 env/
 venv/
 ENV/

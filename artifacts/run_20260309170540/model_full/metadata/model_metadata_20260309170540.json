@@ -1,0 +1,71 @@
+{
+  "timestamp": "20260309170540",
+  "task": "classification",
+  "modelo_final": "lightgbm",
+  "threshold_classificacao": 0.3165170643277114,
+  "best_params": {
+    "learning_rate": 0.024388229115757283,
+    "num_leaves": 101,
+    "max_depth": 8,
+    "min_child_samples": 38,
+    "subsample": 0.8456999064214161,
+    "colsample_bytree": 0.986006781637023
+  },
+  "best_cv_score": 0.4371546914623837,
+  "postprocessor": {
+    "upstream": null,
+    "selected_feature_indices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7
+    ],
+    "feature_names_after_selection": [
+      "x1",
+      "x2",
+      "segmento_A",
+      "segmento_B",
+      "segmento_C",
+      "__scoreia_segment_bucket___segmento=A",
+      "__scoreia_segment_bucket___segmento=B",
+      "__scoreia_segment_bucket___segmento=C"
+    ],
+    "reduction": {
+      "enabled": false,
+      "requested_tail_features": 0,
+      "requested_tail_indices": [],
+      "variance_threshold": 0.7
+    },
+    "final_selected_feature_indices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7
+    ],
+    "feature_names_out": [
+      "x1",
+      "x2",
+      "segmento_A",
+      "segmento_B",
+      "segmento_C",
+      "__scoreia_segment_bucket___segmento=A",
+      "__scoreia_segment_bucket___segmento=B",
+      "__scoreia_segment_bucket___segmento=C"
+    ]
+  },
+  "segment_features": [
+    "segmento"
+  ],
+  "segment_strategy": "global",
+  "model_kind": "lightgbm",
+  "input_dim": 8,
+  "output_dim": 1
+}

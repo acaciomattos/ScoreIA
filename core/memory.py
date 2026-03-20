@@ -58,8 +58,12 @@ def registrar_padrao_planejamento(memoria, evento):
     """
     Registra eventos estruturados de planejamento para aprendizado de padrões.
     """
-    if "padroes_planejamento" not in memoria:
-        memoria["padroes_planejamento"] = []
+    if "eventos_planejamento" not in memoria:
+        memoria["eventos_planejamento"] = []
+
+    memoria["eventos_planejamento"].append(...)
+
+
 
     memoria["padroes_planejamento"].append({
         "timestamp": evento.get("timestamp"),

@@ -1,0 +1,36 @@
+{
+  "executada": true,
+  "modo_auto": true,
+  "melhor_modelo": "mlp",
+  "best_score": 0.8178058858628479,
+  "best_params": {
+    "hidden_units": 252,
+    "n_layers": 1,
+    "dropout": 0.25463982229541854,
+    "lr": 0.008215671842265442
+  },
+  "todos": {
+    "lightgbm": {
+      "best_score": 0.7909558773387888,
+      "best_params": {
+        "learning_rate": 0.06436260879250132,
+        "num_leaves": 181,
+        "max_depth": 10,
+        "min_child_samples": 64,
+        "subsample": 0.9149507274203658,
+        "colsample_bytree": 0.5074897402119533
+      },
+      "n_trials": 40
+    },
+    "mlp": {
+      "best_score": 0.8178058858628479,
+      "best_params": {
+        "hidden_units": 252,
+        "n_layers": 1,
+        "dropout": 0.25463982229541854,
+        "lr": 0.008215671842265442
+      },
+      "n_trials": 40
+    }
+  }
+}

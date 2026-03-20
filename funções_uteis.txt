@@ -1,0 +1,18 @@
+import polars as pl
+
+def detect_discrete_categoricals(df: pl.DataFrame, threshold_unique=20, ratio=0.05):
+    candidates = []
+    
+    for col, dtype in zip(df.columns, df.dtypes):
+        if dtype in pl.datatypes.NUMERIC_DTYPES:
+            
+            n_unique = df[col].n_unique()
+            n_rows = df.height
+            
+            if n_unique < threshold_unique or (n_unique / n_rows) < ratio:
+                candidates.append(col)
+    
+    return candidates
+
+
+
