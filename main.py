@@ -10,13 +10,20 @@ from core.memory import registrar_interacao, salvar_memoria
 
 WEBAPP_HOST = os.getenv("SCOREIA_WEBAPP_HOST", "127.0.0.1")
 WEBAPP_PORT = int(os.getenv("SCOREIA_WEBAPP_PORT", "5000"))
+IMG_WEBAPP_HOST = os.getenv("SCOREIA_IMG_WEBAPP_HOST", WEBAPP_HOST)
+IMG_WEBAPP_PORT = int(os.getenv("SCOREIA_IMG_WEBAPP_PORT", "5001"))
 
 agente = Agente()
 _webapp_thread = None
+_img_webapp_thread = None
 
 
 def _webapp_url():
     return f"http://{WEBAPP_HOST}:{WEBAPP_PORT}"
+
+
+def _img_webapp_url():
+    return f"http://{IMG_WEBAPP_HOST}:{IMG_WEBAPP_PORT}"
 
 
 def _is_webapp_running(host=WEBAPP_HOST, port=WEBAPP_PORT, timeout=0.3):
@@ -74,6 +81,65 @@ def _abrir_interface_modelagem():
     }
 
 
+def _abrir_interface_imagem():
+    global _img_webapp_thread
+
+    url = _img_webapp_url()
+    if _is_webapp_running(host=IMG_WEBAPP_HOST, port=IMG_WEBAPP_PORT):
+        webbrowser.open(url)
+        return {
+            "mensagem": f"Interface de imagem ja estava ativa em {url}.",
+            "artefatos": {"url": url, "status": "already_running"},
+        }
+
+    from tools.img_gen.webapp.app import app
+
+    def _run_webapp():
+        app.run(
+            host=IMG_WEBAPP_HOST,
+            port=IMG_WEBAPP_PORT,
+            debug=False,
+            use_reloader=False,
+        )
+
+    _img_webapp_thread = threading.Thread(
+        target=_run_webapp,
+        name="scoreia-img-webapp",
+        daemon=True,
+    )
+    _img_webapp_thread.start()
+
+    for _ in range(30):
+        if _is_webapp_running(host=IMG_WEBAPP_HOST, port=IMG_WEBAPP_PORT):
+            break
+        time.sleep(0.2)
+
+    if _is_webapp_running(host=IMG_WEBAPP_HOST, port=IMG_WEBAPP_PORT):
+        webbrowser.open(url)
+        return {
+            "mensagem": f"Interface de imagem iniciada em {url}.",
+            "artefatos": {"url": url, "status": "started"},
+        }
+
+    return {
+        "mensagem": (
+            f"A tentativa de iniciar a interface de imagem foi disparada, mas a porta {IMG_WEBAPP_PORT} "
+            f"ainda nao respondeu. Verifique manualmente em {url}."
+        ),
+        "artefatos": {"url": url, "status": "startup_pending"},
+    }
+
+
+def _diagnosticar_audio():
+    from tools.audio_gen.runtime_env import collect_runtime_status, format_runtime_status
+
+    status = collect_runtime_status()
+    return {
+        "mensagem": "Status do modulo de audio:\n" + format_runtime_status(status),
+        "artefatos": {"runtime_status": status},
+    }
+
+
 def handle_interacao(agent, mensagem):
     resposta = None
     tipo_interacao = "comando_usuario"
@@ -114,6 +180,20 @@ def handle_interacao(agent, mensagem):
         tipo_interacao = "modelagem"
         tema = "pipeline ml"
         artefatos = abertura["artefatos"]
+
+    elif msg_lower in {"gerar imagem", "imagem"}:
+        abertura = _abrir_interface_imagem()
+        resposta = abertura["mensagem"]
+        tipo_interacao = "imagem"
+        tema = "projetos de imagem"
+        artefatos = abertura["artefatos"]
+
+    elif msg_lower in {"audio", "áudio", "gerar audio", "gerar áudio"}:
+        diagnostico = _diagnosticar_audio()
+        resposta = diagnostico["mensagem"]
+        tipo_interacao = "audio"
+        tema = "projetos de audio"
+        artefatos = diagnostico["artefatos"]
 
     elif msg.startswith("remover tarefa"):
         n = int(msg.split()[-1])
@@ -158,6 +238,8 @@ def run_cli():
     print("  estudar: <tema>")
     print("  planejar: <objetivo>")
     print("  modelagem")
+    print("  gerar imagem")
+    print("  audio")
     print("  refazer planejamento")
     print("  exportar planejamento")
     print("  exportar tarefas")

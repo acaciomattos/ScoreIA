@@ -1,0 +1,2453 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ScoreIA - Projetos de Imagem</title>
+    <style>
+        :root {
+            --bg: #f4f1ea;
+            --panel: #fffdf8;
+            --panel-alt: #f8f3ea;
+            --line: #d9ccb7;
+            --text: #2f2418;
+            --muted: #6f6254;
+            --accent: #8f4f2a;
+            --success-bg: #edf7ef;
+            --success-line: #9bc4a3;
+            --success-text: #215732;
+            --error-bg: #fff0ed;
+            --error-line: #e2aaa0;
+            --error-text: #8f3020;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            padding: 24px;
+            background:
+                radial-gradient(circle at top right, rgba(143, 79, 42, 0.12), transparent 34%),
+                linear-gradient(180deg, #fbf7ef 0%, var(--bg) 100%);
+            color: var(--text);
+            font-family: "Segoe UI", Tahoma, sans-serif;
+        }
+        .page { max-width: 1380px; margin: 0 auto; }
+        .hero {
+            padding: 24px;
+            border: 1px solid var(--line);
+            border-radius: 18px;
+            background: linear-gradient(135deg, #fff8ef 0%, #fffdf9 50%, #f6ede2 100%);
+            box-shadow: 0 18px 40px rgba(86, 60, 35, 0.08);
+        }
+        .hero h1 { margin: 0 0 6px; font-size: 30px; }
+        .hero p { margin: 0; color: var(--muted); line-height: 1.5; max-width: 900px; }
+        .grid { display: grid; gap: 16px; }
+        .grid-2 { grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); }
+        .panel {
+            margin-top: 16px;
+            padding: 18px;
+            border: 1px solid var(--line);
+            border-radius: 16px;
+            background: var(--panel);
+            box-shadow: 0 10px 24px rgba(66, 46, 27, 0.05);
+        }
+        .panel-alt { background: var(--panel-alt); }
+        .panel h2, .panel h3 { margin: 0 0 12px; }
+        .subtle { color: var(--muted); font-size: 13px; line-height: 1.45; }
+        .field-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 12px;
+        }
+        label { display: block; margin-bottom: 4px; font-size: 13px; color: var(--muted); }
+        input[type="text"], select, textarea {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #cdbda7;
+            border-radius: 10px;
+            background: #fff;
+            color: var(--text);
+        }
+        textarea {
+            min-height: 96px;
+            resize: vertical;
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 12px;
+            line-height: 1.45;
+        }
+        .checkbox-row { display: flex; gap: 8px; align-items: center; margin-top: 8px; }
+        .checkbox-row label { margin: 0; color: var(--text); }
+        .actions { margin-top: 14px; display: flex; gap: 10px; flex-wrap: wrap; }
+        .btn, .btn-secondary {
+            border-radius: 10px;
+            padding: 10px 14px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        .btn { border: 1px solid var(--accent); background: var(--accent); color: #fff; }
+        .btn-secondary { border: 1px solid #bea78b; background: #fff8ef; color: var(--text); }
+        .alert {
+            margin-top: 16px;
+            padding: 14px 16px;
+            border-radius: 12px;
+            border: 1px solid;
+            line-height: 1.45;
+        }
+        .alert-success { background: var(--success-bg); border-color: var(--success-line); color: var(--success-text); }
+        .alert-error { background: var(--error-bg); border-color: var(--error-line); color: var(--error-text); }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+            gap: 12px;
+        }
+        .stat {
+            padding: 12px;
+            border-radius: 12px;
+            border: 1px solid var(--line);
+            background: #fffaf3;
+        }
+        .stat strong { display: block; font-size: 22px; margin-top: 4px; }
+        .cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 16px;
+        }
+        .entity-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 12px;
+            margin-top: 12px;
+        }
+        .entity-slot {
+            padding: 12px;
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            background: #fffaf3;
+        }
+        .entity-slot h4 {
+            margin: 0 0 10px;
+            font-size: 14px;
+        }
+        .item {
+            padding: 12px;
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            background: #fffefb;
+            margin-top: 10px;
+        }
+        .item h4 { margin: 0 0 8px; font-size: 15px; }
+        .item p { margin: 6px 0; line-height: 1.45; }
+        .meta { color: var(--muted); font-size: 12px; }
+        code, pre { background: #f3ecdf; border-radius: 8px; }
+        code { padding: 2px 5px; }
+        pre {
+            padding: 10px;
+            overflow-x: auto;
+            font-size: 12px;
+            line-height: 1.45;
+            margin: 8px 0 0;
+        }
+        details { margin-top: 10px; }
+        summary { cursor: pointer; color: var(--accent); font-weight: 600; }
+        .empty {
+            padding: 16px;
+            border: 1px dashed var(--line);
+            border-radius: 12px;
+            color: var(--muted);
+            background: #fffaf5;
+        }
+        .preview-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 16px;
+            margin-top: 12px;
+        }
+        .preview-card {
+            padding: 12px;
+            border: 1px solid var(--line);
+            border-radius: 14px;
+            background: #fffaf3;
+        }
+        .preview-card img {
+            display: block;
+            width: 100%;
+            aspect-ratio: 1 / 1;
+            object-fit: cover;
+            border-radius: 12px;
+            border: 1px solid #cebda8;
+            background: #f2ebdf;
+        }
+        .preview-meta {
+            margin-top: 10px;
+            color: var(--muted);
+            font-size: 12px;
+            line-height: 1.5;
+        }
+        .inline-form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 8px;
+            border-radius: 999px;
+            border: 1px solid var(--line);
+            background: #fff;
+            font-size: 12px;
+            color: var(--muted);
+        }
+        .tab-shell { margin-top: 16px; }
+        .tab-nav {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 16px;
+            margin-bottom: 6px;
+        }
+        .tab-button {
+            appearance: none;
+            border: 1px solid #ccb79d;
+            background: #fff7eb;
+            color: var(--text);
+            padding: 10px 14px;
+            border-radius: 999px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        .tab-button.is-active {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: #fff;
+            box-shadow: 0 10px 20px rgba(143, 79, 42, 0.18);
+        }
+        .tab-panel { display: none; }
+        .tab-panel.is-active { display: block; }
+        .context-shell {
+            margin-top: 16px;
+            padding: 18px;
+            border: 1px solid var(--line);
+            border-radius: 16px;
+            background: var(--panel);
+            box-shadow: 0 10px 24px rgba(66, 46, 27, 0.05);
+        }
+        .context-shell .cards,
+        .context-shell .panel {
+            margin-top: 0;
+        }
+        .tab-caption {
+            margin-top: 8px;
+            color: var(--muted);
+            font-size: 13px;
+            line-height: 1.45;
+        }
+        .guide-box {
+            margin-top: 14px;
+            padding: 14px 16px;
+            border: 1px solid #d9ccb7;
+            border-radius: 14px;
+            background: linear-gradient(180deg, #fffaf2 0%, #fffefb 100%);
+        }
+        .guide-box strong {
+            display: block;
+            margin-bottom: 6px;
+            font-size: 14px;
+        }
+        .guide-box p {
+            margin: 0;
+            color: var(--muted);
+            line-height: 1.5;
+        }
+        .guide-list {
+            margin: 10px 0 0;
+            padding-left: 18px;
+            color: var(--muted);
+            line-height: 1.55;
+        }
+        .field-note {
+            margin-top: 6px;
+            color: var(--muted);
+            font-size: 12px;
+            line-height: 1.45;
+        }
+        .field-note strong {
+            color: var(--text);
+        }
+        .flow-steps {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 12px;
+            margin-top: 14px;
+        }
+        .flow-step {
+            padding: 12px;
+            border-radius: 12px;
+            border: 1px solid var(--line);
+            background: #fffaf3;
+        }
+        .flow-step strong {
+            display: block;
+            margin-bottom: 6px;
+        }
+        .advanced-block {
+            margin-top: 14px;
+            padding: 12px 14px;
+            border: 1px dashed #cdbda7;
+            border-radius: 12px;
+            background: #fffaf4;
+        }
+        .advanced-block summary {
+            color: var(--text);
+        }
+        .inline-help {
+            margin-top: 8px;
+            color: var(--muted);
+            font-size: 12px;
+            line-height: 1.45;
+        }
+        .quick-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 10px;
+        }
+        .quick-btn {
+            border: 1px solid #ccb79d;
+            background: #fff7eb;
+            color: var(--text);
+            border-radius: 999px;
+            padding: 8px 10px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .quick-btn:hover {
+            background: #f6ede1;
+        }
+        .library-toolbar {
+            display: grid;
+            gap: 12px;
+        }
+        .item.is-hidden,
+        .panel.is-filter-hidden {
+            display: none;
+        }
+        .simple-hidden {
+            display: none !important;
+        }
+        .simple-mode-box {
+            margin-top: 12px;
+            padding: 12px 14px;
+            border: 1px dashed #cdbda7;
+            border-radius: 12px;
+            background: #fffaf4;
+        }
+    </style>
+</head>
+<body>
+    <div class="page">
+        <section class="hero">
+            <h1>ScoreIA - Projetos de Imagem</h1>
+            <p>
+                Esta interface organiza a fase 6 por <code>project_id</code>. O projeto guarda
+                <code>visual_bible</code>, referencias, imports, contexto derivado e working sets,
+                enquanto os artefatos de execucao continuam separados em <code>artifacts/img_gen</code>.
+            </p>
+        </section>
+
+        {% if success_message %}
+        <div class="alert alert-success">{{ success_message }}</div>
+        {% endif %}
+
+        {% if error_message %}
+        <div class="alert alert-error">{{ error_message }}</div>
+        {% endif %}
+
+        <div class="tab-shell">
+            <div class="tab-nav" data-tab-group="primary">
+                <button type="button" class="tab-button is-active" data-tab-target="generation" data-tab-group="primary">1. Geracao</button>
+                <button type="button" class="tab-button" data-tab-target="project" data-tab-group="primary">2. Projeto</button>
+                <button type="button" class="tab-button" data-tab-target="context" data-tab-group="primary">3. Contexto</button>
+                <button type="button" class="tab-button" data-tab-target="models" data-tab-group="primary">4. Modelos</button>
+            </div>
+
+            <div class="tab-panel" data-tab-group="primary" data-tab-panel="project">
+                <p class="tab-caption">
+                    Use esta aba so quando quiser organizar referencias, visual_bible e reaproveitamento. Para gerar imagens rapidamente, continue em <code>Geracao</code>.
+                </p>
+        <section class="grid grid-2">
+            <div class="panel">
+                <h2>Abrir projeto</h2>
+                <p class="subtle">Escolha um projeto existente para continuar um trabalho ja iniciado.</p>
+                {% if current_bundle %}
+                <div class="guide-box">
+                    <strong>Projeto ativo agora</strong>
+                    <p>
+                        <strong>{{ current_bundle.project.name }}</strong><br>
+                        <code>{{ current_bundle.project.project_id }}</code>
+                    </p>
+                </div>
+                {% endif %}
+                <form method="post" enctype="multipart/form-data">
+                    <input type="hidden" name="form_action" value="open_project">
+                    <label for="project_id">Projeto</label>
+                    <select name="project_id" id="project_id">
+                        <option value="">Selecione...</option>
+                        {% for project in projects %}
+                        <option value="{{ project.project_id }}" {% if project.project_id == current_project_id %}selected{% endif %}>
+                            {{ project.name }} ({{ project.project_id }})
+                        </option>
+                        {% endfor %}
+                    </select>
+                    <div class="actions">
+                        <button type="submit" class="btn-secondary">Abrir projeto</button>
+                    </div>
+                </form>
+                {% if not projects %}
+                <div class="inline-help">
+                    Ainda nao existe nenhum projeto salvo. Se quiser organizar suas geracoes desde o inicio, crie um logo ao lado.
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="panel panel-alt">
+                <h2>Novo projeto</h2>
+                <p class="subtle">Crie um projeto quando quiser guardar contexto e reutilizar referencias depois.</p>
+                <div class="guide-box">
+                    <strong>O minimo para criar</strong>
+                    <p>
+                        Se quiser simplificar, informe apenas um <strong>nome</strong>. O tipo ajuda a organizar, mas voce pode manter o padrao se estiver em duvida.
+                    </p>
+                </div>
+                <form method="post" enctype="multipart/form-data">
+                    <input type="hidden" name="form_action" value="create_project">
+                    <div class="field-grid">
+                        <div>
+                            <label for="project_name">Nome</label>
+                            <input type="text" id="project_name" name="project_name" value="{{ form_state.get('project_name', '') }}">
+                            <div class="field-note">Ex.: <strong>ebook_luar_cap1</strong> ou <strong>arte_single_test</strong>.</div>
+                        </div>
+                        <div>
+                            <label for="project_type">Tipo</label>
+                            <select id="project_type" name="project_type">
+                                {% for value, label in project_types %}
+                                <option value="{{ value }}" {% if form_state.get('project_type', 'single_image') == value %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                            <div class="field-note">Se estiver em duvida, use <strong>Imagem pontual</strong>.</div>
+                        </div>
+                    </div>
+                    <details class="advanced-block" style="margin-top: 12px;">
+                        <summary>Informacoes opcionais</summary>
+                        <div style="margin-top: 12px;">
+                            <label for="project_description">Descricao</label>
+                            <textarea id="project_description" name="project_description">{{ form_state.get('project_description', '') }}</textarea>
+                            <div class="field-note">Use se quiser lembrar o objetivo do projeto.</div>
+                        </div>
+                        <div style="margin-top: 12px;">
+                            <label for="project_tags">Tags</label>
+                            <input type="text" id="project_tags" name="project_tags" value="{{ form_state.get('project_tags', '') }}" placeholder="ebook, ficcao, fantasia">
+                            <div class="field-note">Opcional. Serve so para classificacao futura.</div>
+                        </div>
+                    </details>
+                    <details class="advanced-block">
+                        <summary>Metadata JSON opcional</summary>
+                        <textarea name="project_metadata_json" placeholder='{"owner":"acaci","language":"pt-BR"}'>{{ form_state.get('project_metadata_json', '') }}</textarea>
+                    </details>
+                    <div class="actions">
+                        <button type="submit" class="btn">Criar projeto</button>
+                    </div>
+                </form>
+            </div>
+        </section>
+
+        {% if current_bundle %}
+        <section class="panel panel-alt">
+            <h2>Resumo rapido</h2>
+            <div class="field-grid">
+                <div>
+                    <label>Projeto</label>
+                    <div><strong>{{ current_bundle.project.name }}</strong></div>
+                </div>
+                <div>
+                    <label>project_id</label>
+                    <div><code>{{ current_bundle.project.project_id }}</code></div>
+                </div>
+                <div>
+                    <label>visual_bible ativo</label>
+                    <div><code>{{ current_bundle.project.active_visual_bible_id or '-' }}</code></div>
+                </div>
+                <div>
+                    <label>working set ativo</label>
+                    <div><code>{{ current_bundle.project.active_working_set_id or '-' }}</code></div>
+                </div>
+            </div>
+            <div class="stats" style="margin-top: 14px;">
+                <div class="stat">Referencias<strong>{{ manifest_counts.get('references', 0) }}</strong></div>
+                <div class="stat">Promoted assets<strong>{{ manifest_counts.get('promoted_assets', 0) }}</strong></div>
+                <div class="stat">Visual bibles<strong>{{ manifest_counts.get('visual_bibles', 0) }}</strong></div>
+                <div class="stat">Working sets<strong>{{ manifest_counts.get('working_sets', 0) }}</strong></div>
+            </div>
+        </section>
+        {% else %}
+        <section class="panel">
+            <div class="guide-box">
+                <strong>Projeto e opcional</strong>
+                <p>
+                    Voce pode continuar usando o modo livre na aba <code>Geracao</code>. Crie ou abra um projeto apenas quando quiser guardar contexto e reaproveitar imagens com organizacao.
+                </p>
+            </div>
+        </section>
+        {% endif %}
+            </div>
+
+            <div class="tab-panel" data-tab-group="primary" data-tab-panel="models">
+                <p class="tab-caption">
+                    Registre checkpoints e pesos auxiliares antes de ativar recursos como inpainting, IP-Adapter e ControlNet.
+                </p>
+
+        <section class="panel">
+            <h2>Modelos locais</h2>
+            <p class="subtle">
+                O registry de modelos e global para a fase 6. Registre aqui checkpoints de
+                <code>inpainting</code>, pesos de <code>IP-Adapter</code> e modelos de
+                <code>ControlNet</code> que ja estiverem no disco.
+            </p>
+            <div class="guide-box">
+                <strong>Uso normal desta aba</strong>
+                <p>
+                    Esta parte costuma ser configurada uma vez. Se os aliases principais ja aparecerem como
+                    <code>ready</code>, voce pode ir direto para a aba <code>Geracao</code>.
+                </p>
+            </div>
+            <div class="field-grid">
+                <div>
+                    <label>Checkpoints</label>
+                    <div><code>{{ model_storage_paths.checkpoints_dir }}</code></div>
+                </div>
+                <div>
+                    <label>Inpainting</label>
+                    <div><code>{{ model_storage_paths.inpainting_dir }}</code></div>
+                </div>
+                <div>
+                    <label>IP-Adapter</label>
+                    <div><code>{{ model_storage_paths.ip_adapter_dir }}</code></div>
+                </div>
+                <div>
+                    <label>ControlNet</label>
+                    <div><code>{{ model_storage_paths.controlnet_dir }}</code></div>
+                </div>
+            </div>
+
+            <section class="grid grid-2" style="margin-top: 16px;">
+                <div class="item" style="margin-top: 0;">
+                    <h3>Registrar modelo local</h3>
+                    <div class="inline-help">
+                        Para <code>checkpoints</code>, <code>inpainting</code> e
+                        <code>controlnet</code>, informe a pasta raiz do modelo diffusers.
+                        Para <code>ip_adapter</code>, informe a pasta local e, se necessario,
+                        o <code>weight_name</code>.
+                    </div>
+                    <form method="post">
+                        <input type="hidden" name="form_action" value="register_local_model_artifact">
+                        <input type="hidden" name="current_project_id" value="{{ current_project_id or '' }}">
+                        <div class="field-grid">
+                            <div>
+                                <label>Categoria</label>
+                                <select name="model_category">
+                                    {% for category in model_registration_categories %}
+                                    <option value="{{ category.value }}" {% if form_state.get('model_category', 'inpainting') == category.value %}selected{% endif %}>
+                                        {{ category.label }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                                <div class="field-note">Escolha o tipo do modelo que voce quer registrar.</div>
+                            </div>
+                            <div>
+                                <label>Alias</label>
+                                <input type="text" name="model_alias" value="{{ form_state.get('model_alias', default_sd15_inpainting_alias) }}" placeholder="sd15_inpainting_base">
+                                <div class="field-note">Nome curto usado pelo ScoreIA. Se nao tiver motivo para mudar, mantenha o alias sugerido.</div>
+                            </div>
+                            <div>
+                                <label>Origem</label>
+                                <select name="model_source">
+                                    {% for value, label in model_sources %}
+                                    <option value="{{ value }}" {% if form_state.get('model_source', 'manual_local') == value %}selected{% endif %}>
+                                        {{ label }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                                <div class="field-note">Na maioria dos casos, use <strong>Pasta local manual</strong>.</div>
+                            </div>
+                            <div>
+                                <label>repo_id opcional</label>
+                                <input type="text" name="model_repo_id" value="{{ form_state.get('model_repo_id', '') }}" placeholder="stabilityai/stable-diffusion-xl-base-1.0">
+                                <div class="field-note">Pode ficar vazio. Serve apenas para registrar de onde o modelo veio.</div>
+                            </div>
+                        </div>
+                        <div style="margin-top: 12px;">
+                            <label>Caminho local</label>
+                            <input type="text" name="model_local_path" value="{{ form_state.get('model_local_path', '') }}" placeholder="models/img_gen/inpainting/meu_modelo">
+                            <div class="field-note">Pasta do disco onde os arquivos do modelo ja estao salvos.</div>
+                        </div>
+                        <details class="advanced-block">
+                            <summary>Campos avancados para registro</summary>
+                            <div class="field-grid" style="margin-top: 12px;">
+                                <div>
+                                    <label>IP-Adapter weight_name</label>
+                                    <input type="text" name="model_ip_adapter_weight_name" value="{{ form_state.get('model_ip_adapter_weight_name', '') }}" placeholder="ip-adapter_sd15.safetensors">
+                                    <div class="field-note">So preencha se o IP-Adapter nao for detectado sozinho.</div>
+                                </div>
+                                <div>
+                                    <label>IP-Adapter subfolder</label>
+                                    <input type="text" name="model_ip_adapter_subfolder" value="{{ form_state.get('model_ip_adapter_subfolder', '') }}" placeholder="models">
+                                    <div class="field-note">Subpasta interna do IP-Adapter. Se nao souber, deixe vazio.</div>
+                                </div>
+                                <div>
+                                    <label>IP-Adapter image_encoder_folder</label>
+                                    <input type="text" name="model_ip_adapter_image_encoder_folder" value="{{ form_state.get('model_ip_adapter_image_encoder_folder', '') }}" placeholder="image_encoder">
+                                    <div class="field-note">So use se o modelo pedir esse ajuste explicitamente.</div>
+                                </div>
+                                <div>
+                                    <label>IP-Adapter default_scale</label>
+                                    <input type="text" name="model_ip_adapter_default_scale" value="{{ form_state.get('model_ip_adapter_default_scale', '') }}" placeholder="0.7">
+                                    <div class="field-note">Forca padrao da referencia visual. Recomendado: <strong>0.7</strong>.</div>
+                                </div>
+                            </div>
+                            <div style="margin-top: 12px;">
+                                <label>Metadata JSON adicional</label>
+                                <textarea name="model_metadata_json" placeholder='{"notes":"modelo baixado manualmente"}'>{{ form_state.get('model_metadata_json', '') }}</textarea>
+                                <div class="inline-help">Opcional. Serve para anotacoes internas.</div>
+                            </div>
+                        </details>
+                        <div class="actions">
+                            <button type="submit" class="btn">Registrar modelo</button>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="item" style="margin-top: 0;">
+                    <h3>Registry atual</h3>
+                    <div class="inline-help">
+                        Use atualizar depois de adicionar arquivos manualmente nas pastas de
+                        <code>models/img_gen</code> para revalidar o status dos aliases.
+                    </div>
+                    <form method="post">
+                        <input type="hidden" name="form_action" value="refresh_model_registry">
+                        <input type="hidden" name="current_project_id" value="{{ current_project_id or '' }}">
+                        <div class="actions">
+                            <button type="submit" class="btn-secondary">Atualizar status do registry</button>
+                        </div>
+                    </form>
+
+                    {% for category in model_registration_categories %}
+                    {% set items = model_artifacts_by_category.get(category.value, []) %}
+                    <div class="item">
+                        <h4>{{ category.label }}</h4>
+                        {% if items %}
+                            {% for item in items %}
+                            <div class="item">
+                                <p class="meta">
+                                    <code>{{ item.alias }}</code> - status {{ item.status }} - origem {{ item.source }}
+                                </p>
+                                <p><code>{{ item.local_path }}</code></p>
+                                {% if item.repo_id %}
+                                <p class="meta">repo_id: {{ item.repo_id }}</p>
+                                {% endif %}
+                                {% if item.metadata %}
+                                <details>
+                                    <summary>Metadata</summary>
+                                    <pre>{{ item.metadata | tojson(indent=2) }}</pre>
+                                </details>
+                                {% endif %}
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                        <div class="empty">Nenhum alias registrado nesta categoria.</div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </section>
+        </section>
+            </div>
+
+        <div class="tab-panel is-active" data-tab-group="primary" data-tab-panel="generation">
+        <p class="tab-caption">
+            Gere rascunhos, refine com img2img e valide os resultados no preview grid antes de promover para o projeto.
+        </p>
+        <div class="guide-box">
+            <strong>Fluxo mais simples para comecar</strong>
+            <p>Se estiver em duvida, siga esta ordem e evite mexer nos numeros no inicio.</p>
+            <div class="flow-steps">
+                <div class="flow-step">
+                    <strong>1. Rascunho</strong>
+                    Gere 2 imagens em 512x512 a partir de um prompt claro.
+                </div>
+                <div class="flow-step">
+                    <strong>2. Resultados</strong>
+                    Olhe o preview grid e escolha a melhor imagem.
+                </div>
+                <div class="flow-step">
+                    <strong>3. Refino</strong>
+                    Use uma imagem boa como base para variar sem recomeçar do zero.
+                </div>
+                <div class="flow-step">
+                    <strong>4. Inpainting</strong>
+                    Use apenas quando quiser trocar uma area especifica com mascara.
+                </div>
+            </div>
+        </div>
+        <section class="panel">
+            {% if current_bundle %}
+            <h2>Projeto ativo</h2>
+            <div class="field-grid">
+                <div>
+                    <label>Nome</label>
+                    <div><strong>{{ current_bundle.project.name }}</strong></div>
+                </div>
+                <div>
+                    <label>project_id</label>
+                    <div><code>{{ current_bundle.project.project_id }}</code></div>
+                </div>
+                <div>
+                    <label>Tipo</label>
+                    <div>{{ current_bundle.project.project_type }}</div>
+                </div>
+                <div>
+                    <label>Atualizado em</label>
+                    <div>{{ current_bundle.project.updated_at }}</div>
+                </div>
+            </div>
+            {% if current_bundle.project.description %}
+            <p>{{ current_bundle.project.description }}</p>
+            {% endif %}
+            <div class="stats">
+                <div class="stat">Visual bibles<strong>{{ manifest_counts.get('visual_bibles', 0) }}</strong></div>
+                <div class="stat">Referencias<strong>{{ manifest_counts.get('references', 0) }}</strong></div>
+                <div class="stat">Promoted assets<strong>{{ manifest_counts.get('promoted_assets', 0) }}</strong></div>
+                <div class="stat">Imports<strong>{{ manifest_counts.get('imported_projects', 0) }}</strong></div>
+                <div class="stat">Contextos<strong>{{ manifest_counts.get('derived_context', 0) }}</strong></div>
+                <div class="stat">Working sets<strong>{{ manifest_counts.get('working_sets', 0) }}</strong></div>
+            </div>
+            <div class="field-grid" style="margin-top: 14px;">
+                <div>
+                    <label>visual_bible ativo</label>
+                    <div><code>{{ current_bundle.project.active_visual_bible_id or '-' }}</code></div>
+                </div>
+                <div>
+                    <label>working set ativo</label>
+                    <div><code>{{ current_bundle.project.active_working_set_id or '-' }}</code></div>
+                </div>
+                <div>
+                    <label>Import policy</label>
+                    <div>{{ current_bundle.project.import_policy }}</div>
+                </div>
+                <div>
+                    <label>Snapshot policy</label>
+                    <div>{{ current_bundle.project.snapshot_policy }}</div>
+                </div>
+            </div>
+            {% else %}
+            <h2>Modo livre</h2>
+            <div class="guide-box">
+                <strong>Geracao rapida sem projeto</strong>
+                <p>
+                    Voce pode gerar imagens agora mesmo sem abrir nenhum projeto. Nesse modo, as runs ficam em
+                    <code>artifacts/img_gen/_ad_hoc</code>. Se depois quiser organizar referencias, visual bible e reaproveitamento,
+                    abra ou crie um projeto na aba <code>Projeto</code>.
+                </p>
+            </div>
+            {% endif %}
+        </section>
+
+        <div class="tab-nav" data-tab-group="generation">
+            <button type="button" class="tab-button is-active" data-tab-target="draft" data-tab-group="generation">Rascunho</button>
+            <button type="button" class="tab-button" data-tab-target="refine" data-tab-group="generation">Refino</button>
+            <button type="button" class="tab-button" data-tab-target="inpaint" data-tab-group="generation">Inpainting</button>
+            <button type="button" class="tab-button" data-tab-target="results" data-tab-group="generation">Resultados</button>
+        </div>
+        <div class="inline-help" id="quick-fill-status">
+            Dica: voce pode usar os botoes de acao rapida da biblioteca e do preview grid para preencher Refino e Inpainting automaticamente.
+        </div>
+
+        <div class="tab-panel" data-tab-group="generation" data-tab-panel="results">
+        <section class="cards">
+            <div class="panel panel-alt">
+                <h3>Ultimo resultado</h3>
+                <p class="subtle">
+                    Depois de gerar, este e o caminho mais curto: veja a imagem, reuse no refino ou guarde no projeto.
+                </p>
+                {% if current_project_id %}
+                <div class="inline-help">
+                    Se esta imagem estiver boa, voce pode guarda-la no projeto com um clique. O ScoreIA usa uma legenda automatica e salva em referencias e em <code>promoted_assets</code>.
+                </div>
+                {% else %}
+                <div class="inline-help">
+                    Voce esta em modo livre. Se quiser reaproveitar a imagem depois, abra um projeto e gere novamente ou use a aba <code>Projeto</code> antes de guardar referencias.
+                </div>
+                {% endif %}
+                {% if latest_generation_run %}
+                <div class="preview-card">
+                    <img src="{{ latest_generation_run.image_ref.url }}" alt="Ultima imagem gerada">
+                    <div class="preview-meta">
+                        <div>
+                            <strong>{{ latest_generation_run.run_id }}</strong>
+                            <span class="pill">{{ latest_generation_run.mode }}</span>
+                            {% if latest_generation_run.total_images and latest_generation_run.total_images > 1 %}
+                            <span class="pill">img {{ latest_generation_run.image_index }}/{{ latest_generation_run.total_images }}</span>
+                            {% endif %}
+                        </div>
+                        <div>{{ latest_generation_run.generated_at }}</div>
+                    </div>
+                    {% if latest_generation_run.prompt_excerpt %}
+                    <p>{{ latest_generation_run.prompt_excerpt }}</p>
+                    {% endif %}
+                    <div class="quick-actions">
+                        <button
+                            type="button"
+                            class="quick-btn"
+                            data-quick-fill-field="img2img_init_image_path"
+                            data-quick-fill-value="{{ latest_generation_run.image_path }}"
+                            data-quick-fill-primary="generation"
+                            data-quick-fill-secondary="refine"
+                            data-quick-fill-label="Refino"
+                        >Refinar esta imagem</button>
+                        <button
+                            type="button"
+                            class="quick-btn"
+                            data-quick-fill-field="inpaint_init_image_path"
+                            data-quick-fill-value="{{ latest_generation_run.image_path }}"
+                            data-quick-fill-primary="generation"
+                            data-quick-fill-secondary="inpaint"
+                            data-quick-fill-label="Inpainting"
+                        >Editar com mascara</button>
+                    </div>
+                    {% if current_project_id %}
+                    <form method="post">
+                        <input type="hidden" name="form_action" value="promote_generated_output">
+                        <input type="hidden" name="current_project_id" value="{{ current_project_id or '' }}">
+                        <input type="hidden" name="source_run_id" value="{{ latest_generation_run.run_id }}">
+                        <input type="hidden" name="source_image_path" value="{{ latest_generation_run.image_path }}">
+                        <input type="hidden" name="generation_prompt" value="{{ latest_generation_run.prompt }}">
+                        <input type="hidden" name="fallback_caption" value="{{ latest_generation_run.prompt_excerpt or latest_generation_run.run_id }}">
+                        <input type="hidden" name="promotion_caption" value="{{ latest_generation_run.prompt_excerpt or latest_generation_run.run_id }}">
+                        <input type="hidden" name="promotion_role" value="other">
+                        <input type="hidden" name="promotion_create_reference" value="on">
+                        <input type="hidden" name="promotion_create_promoted_asset" value="on">
+                        <div class="actions">
+                            <button type="submit" class="btn-secondary">Guardar no projeto</button>
+                        </div>
+                    </form>
+                    {% endif %}
+                    <details>
+                        <summary>Ver detalhes desta execucao</summary>
+                        <div class="preview-meta" style="margin-top: 10px;">
+                            <div>{{ latest_generation_run.width }}x{{ latest_generation_run.height }} - steps {{ latest_generation_run.num_inference_steps }} - cfg {{ latest_generation_run.guidance_scale }} - qtd {{ latest_generation_run.num_images }}</div>
+                            <div>seed {{ latest_generation_run.seed }} - {{ latest_generation_run.device_strategy }}</div>
+                            <div>
+                                {% if latest_generation_run.safety_checker_mode == 'disabled' %}
+                                <span class="pill">safety checker desligado</span>
+                                {% else %}
+                                <span class="pill">safety checker ligado</span>
+                                {% endif %}
+                                {% if latest_generation_run.nsfw_triggered %}
+                                <span class="pill">nsfw sinalizado</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </details>
+                </div>
+                {% else %}
+                <div class="empty">
+                    Ainda nao ha resultados aqui. Gere a primeira imagem na aba <code>Rascunho</code>.
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="panel">
+                <h3>Mais resultados</h3>
+                <p class="subtle">
+                    Use estes cards quando quiser comparar variacoes anteriores ou escolher outra imagem para refino.
+                </p>
+                {% if generation_runs %}
+                {% set extra_results = namespace(count=0) %}
+                <div class="preview-grid">
+                    {% for run in generation_runs %}
+                    {% if not latest_generation_run or run.run_id != latest_generation_run.run_id or run.image_index != latest_generation_run.image_index %}
+                    {% set extra_results.count = extra_results.count + 1 %}
+                    <div class="preview-card">
+                        <img src="{{ run.image_ref.url }}" alt="Preview {{ run.run_id }}">
+                        <div class="preview-meta">
+                            <div>
+                                <strong>{{ run.run_id }}</strong>
+                                <span class="pill">{{ run.mode }}</span>
+                                {% if run.total_images and run.total_images > 1 %}
+                                <span class="pill">img {{ run.image_index }}/{{ run.total_images }}</span>
+                                {% endif %}
+                            </div>
+                            <div>{{ run.generated_at }}</div>
+                        </div>
+                        {% if run.prompt_excerpt %}
+                        <p>{{ run.prompt_excerpt }}</p>
+                        {% endif %}
+                        <div class="quick-actions">
+                            <button
+                                type="button"
+                                class="quick-btn"
+                                data-quick-fill-field="img2img_init_image_path"
+                                data-quick-fill-value="{{ run.image_path }}"
+                                data-quick-fill-primary="generation"
+                                data-quick-fill-secondary="refine"
+                                data-quick-fill-label="Refino"
+                            >Usar no refino</button>
+                            <button
+                                type="button"
+                                class="quick-btn"
+                                data-quick-fill-field="inpaint_init_image_path"
+                                data-quick-fill-value="{{ run.image_path }}"
+                                data-quick-fill-primary="generation"
+                                data-quick-fill-secondary="inpaint"
+                                data-quick-fill-label="Inpainting"
+                            >Usar no inpainting</button>
+                        </div>
+                        {% if current_project_id %}
+                        <form method="post">
+                            <input type="hidden" name="form_action" value="promote_generated_output">
+                            <input type="hidden" name="current_project_id" value="{{ current_project_id or '' }}">
+                            <input type="hidden" name="source_run_id" value="{{ run.run_id }}">
+                            <input type="hidden" name="source_image_path" value="{{ run.image_path }}">
+                            <input type="hidden" name="generation_prompt" value="{{ run.prompt }}">
+                            <input type="hidden" name="fallback_caption" value="{{ run.prompt_excerpt or run.run_id }}">
+                            <input type="hidden" name="promotion_caption" value="{{ run.prompt_excerpt or run.run_id }}">
+                            <input type="hidden" name="promotion_role" value="other">
+                            <input type="hidden" name="promotion_create_reference" value="on">
+                            <input type="hidden" name="promotion_create_promoted_asset" value="on">
+                            <div class="actions">
+                                <button type="submit" class="btn-secondary">Guardar no projeto</button>
+                            </div>
+                        </form>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                    {% endfor %}
+                </div>
+                {% if extra_results.count == 0 %}
+                <div class="inline-help">
+                    Por enquanto so existe o ultimo resultado mostrado acima. Gere mais imagens para montar um historico aqui.
+                </div>
+                {% endif %}
+                {% else %}
+                <div class="empty">
+                    Ainda nao ha runs para mostrar nesta biblioteca de resultados.
+                </div>
+                {% endif %}
+            </div>
+        </section>
+        </div>
+
+        <div class="tab-panel is-active" data-tab-group="generation" data-tab-panel="draft">
+        <section class="cards">
+            <div class="panel">
+                <h3>Gerar imagem</h3>
+                <p class="subtle">
+                    Este fluxo usa o runner local de <code>txt2img</code> com o checkpoint selecionado
+                    e grava a run em <code>artifacts/img_gen/{{ current_project_id or '_ad_hoc' }}</code>.
+                </p>
+                <div class="guide-box">
+                    <strong>Uso recomendado</strong>
+                    <p>
+                        Se estiver comecando, preencha so o <strong>Prompt</strong> e clique em
+                        <strong>Gerar imagem</strong>. Os numeros abaixo ja estao no ponto recomendado
+                        para a sua maquina.
+                    </p>
+                </div>
+                <form method="post">
+                    <input type="hidden" name="form_action" value="generate_txt2img">
+                    <input type="hidden" name="current_project_id" value="{{ current_project_id or '' }}">
+                    <input type="hidden" name="generation_model_alias" value="{{ form_state.get('generation_model_alias', 'sd15_runwayml_base') }}">
+                    <input type="hidden" name="generation_width" value="{{ form_state.get('generation_width', '512') }}">
+                    <input type="hidden" name="generation_height" value="{{ form_state.get('generation_height', '512') }}">
+                    <input type="hidden" name="generation_num_inference_steps" value="{{ form_state.get('generation_num_inference_steps', '18') }}">
+                    <input type="hidden" name="generation_guidance_scale" value="{{ form_state.get('generation_guidance_scale', '7.5') }}">
+                    <input type="hidden" name="generation_num_images" value="{{ form_state.get('generation_num_images', '2') }}">
+                    <div style="margin-top: 12px;">
+                        <label>Prompt</label>
+                        <textarea name="generation_prompt" placeholder="Ex.: ilustracao cinematografica de uma leitora solitaria em uma biblioteca iluminada por luz quente, atmosfera acolhedora, estilo storybook">{{ form_state.get('generation_prompt', '') }}</textarea>
+                        <div class="field-note">Descreva o que voce quer ver: <strong>assunto + ambiente + clima + estilo</strong>.</div>
+                    </div>
+                    <div class="inline-help">
+                        O ScoreIA usa automaticamente um preset de qualidade para a sua maquina: 512x512, 18 steps, guidance 7.5, 2 imagens por rodada, scheduler otimizado e reforco automatico de qualidade no prompt.
+                    </div>
+                    <details class="advanced-block">
+                        <summary>Opcional: dizer o que evitar</summary>
+                        <div style="margin-top: 12px;">
+                            <label>Negative prompt opcional</label>
+                            <textarea name="generation_negative_prompt" placeholder="Ex.: blurry, low quality, text, watermark, extra fingers">{{ form_state.get('generation_negative_prompt', '') }}</textarea>
+                            <div class="field-note">Se quiser, descreva o que deve ser evitado. Se nao preencher, o ScoreIA usa o contexto padrao do projeto quando existir.</div>
+                        </div>
+                    </details>
+                    <div class="actions">
+                        <button type="submit" class="btn">Gerar imagem</button>
+                    </div>
+                </form>
+            </div>
+        </section>
+        </div>
+
+        <div class="tab-panel" data-tab-group="generation" data-tab-panel="refine">
+        <section class="cards">
+            <div class="panel">
+                <h3>Refinar imagem-base (img2img)</h3>
+                <p class="subtle">
+                    Use uma imagem do projeto, um resultado anterior ou um caminho local para gerar uma nova variacao com controle de <code>strength</code>.
+                </p>
+                <div class="guide-box">
+                    <strong>Quando usar este modo</strong>
+                    <p>
+                        Use <code>Refino</code> quando voce ja tiver uma imagem boa e quiser outra versao parecida,
+                        melhorando composicao, acabamento ou detalhes sem recomeçar do zero.
+                    </p>
+                </div>
+                <form method="post">
+                    <input type="hidden" name="form_action" value="generate_img2img">
+                    <input type="hidden" name="current_project_id" value="{{ current_project_id or '' }}">
+                    <div class="field-grid">
+                        <div>
+                            <label>Modelo</label>
+                            <select name="img2img_model_alias">
+                                {% for model in ready_checkpoints %}
+                                <option value="{{ model.alias }}" {% if form_state.get('img2img_model_alias', 'sd15_runwayml_base') == model.alias %}selected{% endif %}>
+                                    {{ model.alias }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                            <div class="field-note">Modelo usado para a nova variacao. Se houver duvida, mantenha o padrao.</div>
+                        </div>
+                        <div>
+                            <label>Imagem-base</label>
+                            <input type="text" name="img2img_init_image_path" value="{{ form_state.get('img2img_init_image_path', '') }}" list="image-source-options" placeholder="artifacts/img_gen/.../generated/imagem.png">
+                            <div class="field-note">Imagem que servira de ponto de partida.</div>
+                        </div>
+                        <div>
+                            <label>Largura</label>
+                            <input type="number" min="256" step="64" name="img2img_width" value="{{ form_state.get('img2img_width', '512') }}">
+                            <div class="field-note"><strong>Funcao:</strong> largura da imagem final. <strong>Recomendado:</strong> 512.</div>
+                        </div>
+                        <div>
+                            <label>Altura</label>
+                            <input type="number" min="256" step="64" name="img2img_height" value="{{ form_state.get('img2img_height', '512') }}">
+                            <div class="field-note"><strong>Funcao:</strong> altura da imagem final. <strong>Recomendado:</strong> 512.</div>
+                        </div>
+                        <div>
+                            <label>Strength</label>
+                            <input type="number" min="0" max="1" step="0.05" name="img2img_strength" value="{{ form_state.get('img2img_strength', '0.3') }}">
+                            <div class="field-note"><strong>Funcao:</strong> quanto a nova imagem pode se afastar da original. <strong>Recomendado:</strong> 0.25 a 0.35 para refino mais fiel e limpo.</div>
+                        </div>
+                        <div>
+                            <label>Steps</label>
+                            <input type="number" min="1" step="1" name="img2img_num_inference_steps" value="{{ form_state.get('img2img_num_inference_steps', '20') }}">
+                            <div class="field-note"><strong>Recomendado:</strong> 20 para ganhar acabamento sem pesar demais na RTX 2060.</div>
+                        </div>
+                        <div>
+                            <label>Guidance scale</label>
+                            <input type="number" min="1" step="0.1" name="img2img_guidance_scale" value="{{ form_state.get('img2img_guidance_scale', '7.2') }}">
+                            <div class="field-note"><strong>Recomendado:</strong> 7.2.</div>
+                        </div>
+                        <div>
+                            <label>Imagens</label>
+                            <input type="number" min="1" step="1" name="img2img_num_images" value="{{ form_state.get('img2img_num_images', '1') }}">
+                            <div class="field-note"><strong>Recomendado:</strong> 1 para priorizar qualidade e estabilidade no refino.</div>
+                        </div>
+                    </div>
+                    <div style="margin-top: 12px;">
+                        <label>Ou enviar imagem-base</label>
+                        <input type="file" name="img2img_init_image_upload" accept="image/*">
+                        <div class="field-note">Se a imagem ainda estiver no seu computador, envie aqui.</div>
+                    </div>
+                    <div style="margin-top: 12px;">
+                        <label>Prompt</label>
+                        <textarea name="img2img_prompt" placeholder="Ex.: manter a personagem e melhorar a iluminacao, mais atmosfera cinematografica, detalhes no figurino">{{ form_state.get('img2img_prompt', '') }}</textarea>
+                        <div class="field-note">Explique o que deve mudar ou ser reforcado em relacao a imagem-base.</div>
+                    </div>
+                    <div style="margin-top: 12px;">
+                        <label>Negative prompt</label>
+                        <textarea name="img2img_negative_prompt" placeholder="Ex.: blurry, extra fingers, distorted face, text, watermark">{{ form_state.get('img2img_negative_prompt', '') }}</textarea>
+                        <div class="field-note">Use para reforcar o que deve ser evitado no refinamento.</div>
+                    </div>
+                    <details class="advanced-block">
+                        <summary>Referencias visuais opcionais</summary>
+                        <p class="inline-help">Use so se quiser amarrar o refino a uma referencia visual adicional ou a uma estrutura especifica.</p>
+                        <div class="field-grid" style="margin-top: 12px;">
+                            <div>
+                                <label>IP-Adapter alias</label>
+                                {% if ready_ip_adapters %}
+                                <select name="img2img_ip_adapter_alias">
+                                    <option value="">Nenhum</option>
+                                    {% for model in ready_ip_adapters %}
+                                    <option value="{{ model.alias }}" {% if form_state.get('img2img_ip_adapter_alias', '') == model.alias %}selected{% endif %}>
+                                        {{ model.alias }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                                {% else %}
+                                <input type="text" name="img2img_ip_adapter_alias" value="{{ form_state.get('img2img_ip_adapter_alias', '') }}" placeholder="alias registrado em ip_adapter">
+                                {% endif %}
+                                <div class="field-note"><strong>Funcao:</strong> puxar estilo ou identidade visual de uma imagem de referencia. <strong>Recomendado:</strong> deixe vazio no uso normal.</div>
+                            </div>
+                            <div>
+                                <label>Imagem de referencia do IP-Adapter</label>
+                                <input type="text" name="img2img_ip_adapter_image_path" value="{{ form_state.get('img2img_ip_adapter_image_path', '') }}" list="image-source-options" placeholder="projects/... ou artifacts/...">
+                                <div class="field-note">Imagem usada como guia visual adicional.</div>
+                            </div>
+                            <div>
+                                <label>IP-Adapter scale</label>
+                                <input type="number" min="0" max="1.5" step="0.1" name="img2img_ip_adapter_scale" value="{{ form_state.get('img2img_ip_adapter_scale', '0.7') }}">
+                                <div class="field-note"><strong>Recomendado:</strong> 0.7.</div>
+                            </div>
+                            <div>
+                                <label>ControlNet alias</label>
+                                {% if ready_controlnets %}
+                                <select name="img2img_controlnet_alias">
+                                    <option value="">Nenhum</option>
+                                    {% for model in ready_controlnets %}
+                                    <option value="{{ model.alias }}" {% if form_state.get('img2img_controlnet_alias', '') == model.alias %}selected{% endif %}>
+                                        {{ model.alias }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                                {% else %}
+                                <input type="text" name="img2img_controlnet_alias" value="{{ form_state.get('img2img_controlnet_alias', '') }}" placeholder="alias registrado em controlnet">
+                                {% endif %}
+                                <div class="field-note"><strong>Funcao:</strong> impor estrutura visual, como pose ou contorno. Deixe vazio se nao precisar.</div>
+                            </div>
+                            <div>
+                                <label>Imagem de condicionamento do ControlNet</label>
+                                <input type="text" name="img2img_control_image_path" value="{{ form_state.get('img2img_control_image_path', '') }}" list="image-source-options" placeholder="edge map, pose map, etc.">
+                                <div class="field-note">Guia estrutural para pose, bordas ou composicao.</div>
+                            </div>
+                            <div>
+                                <label>ControlNet conditioning scale</label>
+                                <input type="number" min="0" max="2" step="0.1" name="img2img_controlnet_conditioning_scale" value="{{ form_state.get('img2img_controlnet_conditioning_scale', '0.8') }}">
+                                <div class="field-note"><strong>Recomendado:</strong> 0.8.</div>
+                            </div>
+                        </div>
+                    </details>
+                    <details class="advanced-block">
+                        <summary>Ajustes avancados</summary>
+                        <div class="field-grid" style="margin-top: 12px;">
+                            <div>
+                                <label>Seed opcional</label>
+                                <input type="number" step="1" name="img2img_seed" value="{{ form_state.get('img2img_seed', '') }}">
+                                <div class="field-note">Use so se quiser repetir ou comparar exatamente o mesmo teste.</div>
+                            </div>
+                        </div>
+                    <div class="checkbox-row">
+                        <input type="checkbox" id="img2img_include_visual_bible_context" name="img2img_include_visual_bible_context" {% if form_state.get('img2img_include_visual_bible_context') == 'on' %}checked{% endif %}>
+                        <label for="img2img_include_visual_bible_context">Usar o visual_bible ativo como ajuda de contexto</label>
+                    </div>
+                    <div class="inline-help">Recomendado quando o projeto ja tem identidade visual bem definida.</div>
+                    <div class="checkbox-row">
+                        <input type="checkbox" id="img2img_safety_checker_enabled" name="img2img_safety_checker_enabled" {% if form_state.get('img2img_safety_checker_enabled') == 'on' %}checked{% endif %}>
+                        <label for="img2img_safety_checker_enabled">Manter safety checker ligado</label>
+                    </div>
+                    <div class="inline-help">
+                        Se a imagem vier preta por falso positivo, refaça com este item desligado.
+                    </div>
+                    </details>
+                    <div class="actions">
+                        <button type="submit" class="btn">Executar img2img</button>
+                    </div>
+                </form>
+            </div>
+        </section>
+        </div>
+
+        <div class="tab-panel" data-tab-group="generation" data-tab-panel="results">
+        <section class="cards">
+            <div class="panel panel-alt">
+                <h3>Ultima run</h3>
+                {% if latest_generation_run %}
+                <div class="preview-card">
+                    <img src="{{ latest_generation_run.image_ref.url }}" alt="Ultima imagem gerada">
+                    <div class="preview-meta">
+                        <div>
+                            <strong>{{ latest_generation_run.run_id }}</strong>
+                            <span class="pill">{{ latest_generation_run.mode }}</span>
+                            {% if latest_generation_run.total_images and latest_generation_run.total_images > 1 %}
+                            <span class="pill">img {{ latest_generation_run.image_index }}/{{ latest_generation_run.total_images }}</span>
+                            {% endif %}
+                        </div>
+                        <div>{{ latest_generation_run.generated_at }}</div>
+                        <div>{{ latest_generation_run.width }}x{{ latest_generation_run.height }} - steps {{ latest_generation_run.num_inference_steps }} - cfg {{ latest_generation_run.guidance_scale }} - qtd {{ latest_generation_run.num_images }}</div>
+                        <div>seed {{ latest_generation_run.seed }} - {{ latest_generation_run.device_strategy }}</div>
+                        <div>
+                            {% if latest_generation_run.safety_checker_mode == 'disabled' %}
+                            <span class="pill">safety checker desligado</span>
+                            {% else %}
+                            <span class="pill">safety checker ligado</span>
+                            {% endif %}
+                            {% if latest_generation_run.nsfw_triggered %}
+                            <span class="pill">nsfw sinalizado</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% if latest_generation_run.prompt_excerpt %}
+                    <p>{{ latest_generation_run.prompt_excerpt }}</p>
+                    {% endif %}
+                </div>
+                {% else %}
+                <div class="empty">
+                    Nenhuma run de imagem registrada ainda para este projeto.
+                </div>
+                {% endif %}
+            </div>
+        </section>
+        </div>
+
+        <div class="tab-panel" data-tab-group="generation" data-tab-panel="inpaint">
+        <section class="cards">
+            <div class="panel panel-alt">
+                <h3>Inpainting</h3>
+                <p class="subtle">
+                    Requer um checkpoint dedicado de inpainting. A imagem-base e a mascara devem ter o mesmo enquadramento; a mascara deve destacar a area a ser alterada.
+                </p>
+                <div class="guide-box">
+                    <strong>Quando usar este modo</strong>
+                    <p>
+                        Use <code>Inpainting</code> quando quiser trocar somente uma parte da imagem, como um objeto,
+                        uma roupa ou um detalhe do fundo. A mascara marca a area que pode mudar.
+                    </p>
+                </div>
+                {% if not ready_inpainting_models %}
+                <div class="empty">
+                    Nenhum modelo de inpainting pronto foi detectado em <code>models/img_gen/inpainting</code>.
+                    O formulario ja esta disponivel, mas o runner vai exigir um checkpoint com <code>UNet in_channels=9</code>.
+                    O alias padrao esperado e <code>sd15_inpainting_base</code>.
+                </div>
+                {% endif %}
+                <form method="post" enctype="multipart/form-data">
+                    <input type="hidden" name="form_action" value="generate_inpainting">
+                    <input type="hidden" name="current_project_id" value="{{ current_project_id or '' }}">
+                    <div class="field-grid">
+                        <div>
+                            <label>Modelo de inpainting</label>
+                            {% if ready_inpainting_models %}
+                            <select name="inpaint_model_alias">
+                                {% for model in ready_inpainting_models %}
+                                <option value="{{ model.alias }}" {% if form_state.get('inpaint_model_alias', '') == model.alias %}selected{% endif %}>
+                                    {{ model.alias }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                            {% else %}
+                            <input type="text" name="inpaint_model_alias" value="{{ form_state.get('inpaint_model_alias', 'sd15_inpainting_base') }}" placeholder="alias do checkpoint de inpainting">
+                            {% endif %}
+                            <div class="field-note">Modelo especializado em edicao por mascara. Se ele ja estiver pronto, mantenha o alias padrao.</div>
+                        </div>
+                        <div>
+                            <label>Imagem-base</label>
+                            <input type="text" name="inpaint_init_image_path" value="{{ form_state.get('inpaint_init_image_path', '') }}" list="image-source-options" placeholder="artifacts/img_gen/.../generated/imagem.png">
+                            <div class="field-note">Imagem original que sera editada.</div>
+                        </div>
+                        <div>
+                            <label>Mascara</label>
+                            <input type="text" name="inpaint_mask_image_path" value="{{ form_state.get('inpaint_mask_image_path', '') }}" list="image-source-options" placeholder="projects/img_gen/.../references/images/mask.png">
+                            <div class="field-note">Imagem em preto e branco que marca a area a alterar. O ideal e usar o mesmo tamanho da imagem-base.</div>
+                        </div>
+                        <div>
+                            <label>Largura</label>
+                            <input type="number" min="256" step="64" name="inpaint_width" value="{{ form_state.get('inpaint_width', '512') }}">
+                            <div class="field-note"><strong>Recomendado:</strong> 512.</div>
+                        </div>
+                        <div>
+                            <label>Altura</label>
+                            <input type="number" min="256" step="64" name="inpaint_height" value="{{ form_state.get('inpaint_height', '512') }}">
+                            <div class="field-note"><strong>Recomendado:</strong> 512.</div>
+                        </div>
+                        <div>
+                            <label>Strength</label>
+                            <input type="number" min="0" max="1" step="0.05" name="inpaint_strength" value="{{ form_state.get('inpaint_strength', '0.75') }}">
+                            <div class="field-note"><strong>Funcao:</strong> quanto a area mascarada pode ser recriada. <strong>Recomendado:</strong> 0.7 a 0.8 para trocar a area mantendo melhor integracao.</div>
+                        </div>
+                        <div>
+                            <label>Steps</label>
+                            <input type="number" min="1" step="1" name="inpaint_num_inference_steps" value="{{ form_state.get('inpaint_num_inference_steps', '24') }}">
+                            <div class="field-note"><strong>Recomendado:</strong> 24 para melhorar acabamento da area editada.</div>
+                        </div>
+                        <div>
+                            <label>Guidance scale</label>
+                            <input type="number" min="1" step="0.1" name="inpaint_guidance_scale" value="{{ form_state.get('inpaint_guidance_scale', '7.5') }}">
+                            <div class="field-note"><strong>Recomendado:</strong> 7.5.</div>
+                        </div>
+                        <div>
+                            <label>Imagens</label>
+                            <input type="number" min="1" step="1" name="inpaint_num_images" value="{{ form_state.get('inpaint_num_images', '1') }}">
+                            <div class="field-note"><strong>Recomendado:</strong> 1 para concentrar VRAM na qualidade da edicao.</div>
+                        </div>
+                    </div>
+                    <input type="hidden" name="inpaint_mask_blur_radius" value="{{ form_state.get('inpaint_mask_blur_radius', '6.0') }}">
+                    <div style="margin-top: 12px;">
+                        <label>Ou enviar imagem-base</label>
+                        <input type="file" name="inpaint_init_image_upload" accept="image/*">
+                        <div class="field-note">Use isto se a imagem-base ainda estiver apenas no seu computador.</div>
+                    </div>
+                    <div style="margin-top: 12px;">
+                        <label>Ou enviar mascara</label>
+                        <input type="file" name="inpaint_mask_image_upload" accept="image/*">
+                        <div class="field-note">Envie aqui a mascara em preto e branco se ela ainda nao estiver no ScoreIA.</div>
+                    </div>
+                    <div style="margin-top: 12px;">
+                        <label>Prompt</label>
+                        <textarea name="inpaint_prompt" placeholder="Ex.: substituir a area mascarada por um medalhao de bronze antigo, com detalhes gravados">{{ form_state.get('inpaint_prompt', '') }}</textarea>
+                        <div class="field-note">Descreva apenas o que deve entrar ou mudar na area mascarada.</div>
+                    </div>
+                    <div style="margin-top: 12px;">
+                        <label>Negative prompt</label>
+                        <textarea name="inpaint_negative_prompt" placeholder="Ex.: blurry, low quality, text, watermark, deformed object">{{ form_state.get('inpaint_negative_prompt', '') }}</textarea>
+                        <div class="field-note">Use para evitar defeitos ou estilos indesejados na area editada.</div>
+                    </div>
+                    <details class="advanced-block">
+                        <summary>Ajustes avancados</summary>
+                        <div class="field-grid" style="margin-top: 12px;">
+                            <div>
+                                <label>Seed opcional</label>
+                                <input type="number" step="1" name="inpaint_seed" value="{{ form_state.get('inpaint_seed', '') }}">
+                                <div class="field-note">Use so para repetir um teste especifico.</div>
+                            </div>
+                        </div>
+                    <div class="checkbox-row">
+                        <input type="checkbox" id="inpaint_include_visual_bible_context" name="inpaint_include_visual_bible_context" {% if form_state.get('inpaint_include_visual_bible_context') == 'on' %}checked{% endif %}>
+                        <label for="inpaint_include_visual_bible_context">Usar o visual_bible ativo como ajuda de contexto</label>
+                    </div>
+                    <div class="inline-help">Recomendado quando a edicao precisa manter a identidade visual do projeto.</div>
+                    <div class="checkbox-row">
+                        <input type="checkbox" id="inpaint_safety_checker_enabled" name="inpaint_safety_checker_enabled" {% if form_state.get('inpaint_safety_checker_enabled') == 'on' %}checked{% endif %}>
+                        <label for="inpaint_safety_checker_enabled">Manter safety checker ligado</label>
+                    </div>
+                    <div class="inline-help">Deixe ligado por padrao.</div>
+                    </details>
+                    <div class="actions">
+                        <button type="submit" class="btn-secondary">Executar inpainting</button>
+                    </div>
+                </form>
+            </div>
+        </section>
+        </div>
+        </div>
+
+        {% if current_bundle %}
+        <div class="tab-panel" data-tab-group="primary" data-tab-panel="context">
+        <div class="context-shell">
+            <p class="tab-caption" style="margin-top: 0;">
+                Monte o contexto do projeto em duas camadas: edicao dos insumos e biblioteca dos itens ja salvos.
+            </p>
+            <div class="guide-box">
+                <strong>Ordem mais simples para preencher o contexto</strong>
+                <div class="flow-steps">
+                    <div class="flow-step">
+                        <strong>1. Visual Bible</strong>
+                        Defina o estilo geral do projeto e os personagens ou ambientes principais.
+                    </div>
+                    <div class="flow-step">
+                        <strong>2. Referencias</strong>
+                        Adicione imagens, textos ou outras fontes que ajudam a orientar a geracao.
+                    </div>
+                    <div class="flow-step">
+                        <strong>3. Imports</strong>
+                        Importe parte de outro projeto apenas se quiser reaproveitar contexto antigo.
+                    </div>
+                    <div class="flow-step">
+                        <strong>4. Working Set</strong>
+                        Monte um subconjunto ativo para a proxima rodada de geracao.
+                    </div>
+                </div>
+            </div>
+            <div class="tab-nav" data-tab-group="context">
+                <button type="button" class="tab-button is-active" data-tab-target="visual_bible" data-tab-group="context">Visual Bible</button>
+                <button type="button" class="tab-button" data-tab-target="references" data-tab-group="context">Referencias</button>
+                <button type="button" class="tab-button" data-tab-target="imports" data-tab-group="context">Imports</button>
+                <button type="button" class="tab-button" data-tab-target="library" data-tab-group="context">Working Set e Biblioteca</button>
+            </div>
+            <div class="tab-panel is-active" data-tab-group="context" data-tab-panel="visual_bible">
+
+        <section class="cards">
+            <div class="panel">
+                <h3>{% if editing_visual_bible_id %}Editar visual_bible{% else %}Novo visual_bible{% endif %}</h3>
+                <p class="subtle">
+                    {% if editing_visual_bible_id %}
+                    Editando a versao <code>{{ editing_visual_bible_id }}</code>. As alteracoes serao salvas nesta mesma versao.
+                    {% else %}
+                    O visual_bible agora aceita estilo e entidades em campos separados. Isso facilita
+                    consistencia visual e deixa o projeto mais editavel pela interface.
+                    {% endif %}
+                </p>
+                <div class="guide-box">
+                    <strong>O minimo para comecar bem</strong>
+                    <p>
+                        Se quiser preencher so o essencial, comece com <strong>Label</strong>,
+                        <strong>Resumo</strong> e <strong>Prompt anchor</strong>. Depois, se fizer sentido,
+                        abra os blocos de estilo, personagens e regras.
+                    </p>
+                </div>
+                <form method="post">
+                    <input type="hidden" name="form_action" value="{% if editing_visual_bible_id %}update_visual_bible{% else %}add_visual_bible{% endif %}">
+                    <input type="hidden" name="current_project_id" value="{{ current_project_id or '' }}">
+                    {% if editing_visual_bible_id %}
+                    <input type="hidden" name="editing_visual_bible_id" value="{{ editing_visual_bible_id }}">
+                    {% endif %}
+                    <div class="field-grid">
+                        <div>
+                            <label>Label</label>
+                            <input type="text" name="visual_bible_label" value="{{ form_state.get('visual_bible_label', '') }}">
+                            <div class="field-note">Nome curto desta versao do visual bible. Ex.: <strong>v1 base</strong> ou <strong>ebook capitulo 1</strong>.</div>
+                        </div>
+                        <div>
+                            <label>Caminho relativo opcional</label>
+                            <input type="text" name="visual_bible_relative_path" value="{{ form_state.get('visual_bible_relative_path', '') }}" placeholder="visual_bibles/versions/vb_v001.md">
+                            <div class="field-note">Opcional. Normalmente voce pode deixar vazio.</div>
+                        </div>
+                        <div>
+                            <label>Source reference ids</label>
+                            <input type="text" name="visual_bible_source_reference_ids" value="{{ form_state.get('visual_bible_source_reference_ids', '') }}" placeholder="ref_1, ref_2">
+                            <div class="field-note">Opcional. Use apenas se quiser ligar este visual bible a referencias ja cadastradas.</div>
+                        </div>
+                    </div>
+                    <div style="margin-top: 12px;">
+                        <label>Resumo</label>
+                        <textarea name="visual_bible_summary">{{ form_state.get('visual_bible_summary', '') }}</textarea>
+                        <div class="field-note">Resumo simples da identidade visual do projeto. Pense em <strong>quem</strong>, <strong>onde</strong> e <strong>qual o clima</strong>.</div>
+                    </div>
+                    <div style="margin-top: 12px;">
+                        <label>Prompt anchor</label>
+                        <textarea name="visual_bible_prompt_anchor">{{ form_state.get('visual_bible_prompt_anchor', '') }}</textarea>
+                        <div class="field-note">Frase-base que ajuda a repetir o estilo do projeto nas geracoes futuras.</div>
+                    </div>
+                    <div style="margin-top: 12px;">
+                        <label>Negative prompt anchor</label>
+                        <textarea name="visual_bible_negative_prompt_anchor">{{ form_state.get('visual_bible_negative_prompt_anchor', '') }}</textarea>
+                        <div class="field-note">Lista-base do que deve ser evitado com frequencia. Se nao souber, pode deixar vazio.</div>
+                    </div>
+                    <details class="advanced-block">
+                        <summary>Estilo do projeto</summary>
+                        <div class="inline-help">
+                            Aqui voce descreve a cara geral do projeto: cores, luz, clima e acabamento.
+                            Se estiver no comeco, pode preencher aos poucos.
+                        </div>
+                        <div class="field-grid" style="margin-top: 12px;">
+                            {% for field in style_profile_fields %}
+                            <div>
+                                <label>{{ field.label }}</label>
+                                <input
+                                    type="text"
+                                    name="style_profile_{{ field.name }}"
+                                    value="{{ form_state.get('style_profile_' ~ field.name, '') }}"
+                                    placeholder="{{ field.placeholder }}"
+                                >
+                            </div>
+                            {% endfor %}
+                        </div>
+                        <details style="margin-top: 12px;">
+                            <summary>Metadata do style profile</summary>
+                            <textarea
+                                name="visual_bible_style_profile_metadata_json"
+                                placeholder='{"season":"chapter_01","approval":"draft"}'
+                            >{{ form_state.get('visual_bible_style_profile_metadata_json', '') }}</textarea>
+                        </details>
+                    </details>
+
+                    {% for bucket in visual_entity_buckets %}
+                    <details class="advanced-block">
+                        <summary>{{ bucket.label }}</summary>
+                        <div class="inline-help">
+                            Preencha apenas os itens que realmente importam para o projeto. Nao precisa usar todos os espacos.
+                        </div>
+                        <div class="entity-grid" style="margin-top: 12px;">
+                            {% for idx in visual_entity_slot_range %}
+                            <div class="entity-slot">
+                                <h4>{{ bucket.singular_label }} {{ idx + 1 }}</h4>
+                                <label>Label</label>
+                                <input
+                                    type="text"
+                                    name="{{ bucket.prefix }}_{{ idx }}_label"
+                                    value="{{ form_state.get(bucket.prefix ~ '_' ~ idx ~ '_label', '') }}"
+                                >
+                                <label style="margin-top: 8px;">Resumo</label>
+                                <textarea
+                                    name="{{ bucket.prefix }}_{{ idx }}_summary"
+                                    placeholder="{{ bucket.summary_placeholder }}"
+                                >{{ form_state.get(bucket.prefix ~ '_' ~ idx ~ '_summary', '') }}</textarea>
+                                <label style="margin-top: 8px;">Prompt anchor</label>
+                                <input
+                                    type="text"
+                                    name="{{ bucket.prefix }}_{{ idx }}_prompt_anchor"
+                                    value="{{ form_state.get(bucket.prefix ~ '_' ~ idx ~ '_prompt_anchor', '') }}"
+                                >
+                                <label style="margin-top: 8px;">Negative prompt anchor</label>
+                                <input
+                                    type="text"
+                                    name="{{ bucket.prefix }}_{{ idx }}_negative_prompt_anchor"
+                                    value="{{ form_state.get(bucket.prefix ~ '_' ~ idx ~ '_negative_prompt_anchor', '') }}"
+                                >
+                                <label style="margin-top: 8px;">Atributos</label>
+                                <input
+                                    type="text"
+                                    name="{{ bucket.prefix }}_{{ idx }}_attributes"
+                                    value="{{ form_state.get(bucket.prefix ~ '_' ~ idx ~ '_attributes', '') }}"
+                                    placeholder="{{ bucket.attributes_placeholder }}"
+                                >
+                                <label style="margin-top: 8px;">Reference ids</label>
+                                <input
+                                    type="text"
+                                    name="{{ bucket.prefix }}_{{ idx }}_reference_ids"
+                                    value="{{ form_state.get(bucket.prefix ~ '_' ~ idx ~ '_reference_ids', '') }}"
+                                    placeholder="ref_001, ref_002"
+                                >
+                                {% if bucket.prefix == 'character' %}
+                                <label style="margin-top: 8px;">Imagem de referencia opcional</label>
+                                <input
+                                    type="file"
+                                    name="{{ bucket.prefix }}_{{ idx }}_reference_upload"
+                                    accept="image/*"
+                                >
+                                <div class="field-note">
+                                    Se voce enviar uma imagem aqui, ela sera salva como referencia do projeto e vinculada automaticamente a este personagem ao salvar o visual bible.
+                                </div>
+                                {% endif %}
+                                <label style="margin-top: 8px;">Tags</label>
+                                <input
+                                    type="text"
+                                    name="{{ bucket.prefix }}_{{ idx }}_tags"
+                                    value="{{ form_state.get(bucket.prefix ~ '_' ~ idx ~ '_tags', '') }}"
+                                    placeholder="principal, frio, metalico"
+                                >
+                                <label style="margin-top: 8px;">Notas</label>
+                                <textarea
+                                    name="{{ bucket.prefix }}_{{ idx }}_notes"
+                                    placeholder="Observacoes de continuidade ou restricoes"
+                                >{{ form_state.get(bucket.prefix ~ '_' ~ idx ~ '_notes', '') }}</textarea>
+                                <div class="checkbox-row">
+                                    <input
+                                        type="checkbox"
+                                        id="{{ bucket.prefix }}_{{ idx }}_locked"
+                                        name="{{ bucket.prefix }}_{{ idx }}_locked"
+                                        {% if form_state.get(bucket.prefix ~ '_' ~ idx ~ '_locked') == 'on' %}checked{% endif %}
+                                    >
+                                    <label for="{{ bucket.prefix }}_{{ idx }}_locked">Bloquear consistencia</label>
+                                </div>
+                                <div class="field-note">Marque isso quando esse item precisar permanecer muito consistente entre imagens.</div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </details>
+                    {% endfor %}
+                    <details class="advanced-block">
+                        <summary>Regras e compatibilidade</summary>
+                        <div style="margin-top: 12px;">
+                            <label>Composition rules</label>
+                            <textarea name="visual_bible_composition_rules" placeholder="Manter personagem principal em destaque&#10;Evitar excesso de elementos no fundo">{{ form_state.get('visual_bible_composition_rules', '') }}</textarea>
+                            <div class="field-note">Regras de enquadramento e organizacao visual. Opcional.</div>
+                        </div>
+                        <div style="margin-top: 12px;">
+                            <label>Continuity rules</label>
+                            <textarea name="visual_bible_continuity_rules" placeholder="Olhos verdes da Lyra sempre consistentes&#10;Medalhao deve aparecer nos capitulos centrais">{{ form_state.get('visual_bible_continuity_rules', '') }}</textarea>
+                            <div class="field-note">Use para lembrar detalhes que nao podem mudar entre imagens.</div>
+                        </div>
+                        <div style="margin-top: 12px;">
+                            <label>Notas</label>
+                            <textarea name="visual_bible_notes">{{ form_state.get('visual_bible_notes', '') }}</textarea>
+                        </div>
+                        <details style="margin-top: 12px;">
+                        <summary>Compatibilidade avancada</summary>
+                        <label style="margin-top: 10px;">Style profile JSON bruto</label>
+                        <textarea name="visual_bible_style_profile_json" placeholder='{"style_keywords":["storybook","cinematic"],"palette_keywords":["amber","teal"]}'>{{ form_state.get('visual_bible_style_profile_json', '') }}</textarea>
+                        <label style="margin-top: 10px;">Metadata JSON</label>
+                        <textarea name="visual_bible_metadata_json" placeholder='{"version":"v1","reviewer":"usuario"}'>{{ form_state.get('visual_bible_metadata_json', '') }}</textarea>
+                        </details>
+                    </details>
+                    {% set visual_bible_active_value = form_state.get('visual_bible_set_active', 'on' if not editing_visual_bible_id else '') %}
+                    <div class="checkbox-row">
+                        <input type="checkbox" id="visual_bible_set_active" name="visual_bible_set_active" {% if visual_bible_active_value == 'on' %}checked{% endif %}>
+                        <label for="visual_bible_set_active">Definir esta versao como ativa</label>
+                    </div>
+                    <div class="actions">
+                        <button type="submit" class="btn">{% if editing_visual_bible_id %}Salvar alteracoes{% else %}Salvar visual_bible{% endif %}</button>
+                    </div>
+                </form>
+                {% if editing_visual_bible_id %}
+                <form method="post">
+                    <input type="hidden" name="form_action" value="cancel_edit_visual_bible">
+                    <input type="hidden" name="current_project_id" value="{{ current_project_id or '' }}">
+                    <div class="actions">
+                        <button type="submit" class="btn-secondary">Cancelar edicao</button>
+                    </div>
+                </form>
+                {% endif %}
+            </div>
+        </section>
+            </div>
+
+            <div class="tab-panel" data-tab-group="context" data-tab-panel="references">
+        <section class="cards">
+            <div class="panel">
+                <h3>Nova referencia</h3>
+                <div class="guide-box">
+                    <strong>Quando usar</strong>
+                    <p>
+                        Adicione aqui qualquer material que ajude a orientar a geracao: imagens, descricoes,
+                        trechos de texto ou outros insumos de contexto.
+                    </p>
+                </div>
+                <form method="post" enctype="multipart/form-data">
+                    <input type="hidden" name="form_action" value="add_reference_asset">
+                    <input type="hidden" name="current_project_id" value="{{ current_project_id or '' }}">
+                    <div class="field-grid">
+                        <div>
+                            <label>Source type</label>
+                            <select name="reference_source_type">
+                                {% for value, label in reference_source_types %}
+                                <option value="{{ value }}" {% if form_state.get('reference_source_type', 'image') == value %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                            <div class="field-note">Tipo da referencia que voce esta cadastrando.</div>
+                        </div>
+                        <div>
+                            <label>Role</label>
+                            <select name="reference_role">
+                                {% for value, label in reference_roles %}
+                                <option value="{{ value }}" {% if form_state.get('reference_role', 'character') == value %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                            <div class="field-note">Papel dessa referencia no projeto. Ex.: personagem, ambiente ou estilo.</div>
+                        </div>
+                        <div>
+                            <label>Origin</label>
+                            <input type="text" name="reference_origin" value="{{ form_state.get('reference_origin', 'user_upload') }}">
+                            <div class="field-note">Origem livre para anotacao. Se quiser, deixe como <strong>user_upload</strong>.</div>
+                        </div>
+                    </div>
+                    <div style="margin-top: 12px;">
+                        <label>Arquivo da referencia</label>
+                        <input type="file" name="reference_file_upload" accept="image/*,text/plain,.md,audio/*,video/*">
+                        <div class="field-note">Use aqui para enviar uma imagem, texto, audio ou video que ainda nao esteja em nenhum projeto.</div>
+                    </div>
+                    <div style="margin-top: 12px;">
+                        <label>Legenda / contexto</label>
+                        <textarea name="reference_caption">{{ form_state.get('reference_caption', '') }}</textarea>
+                        <div class="field-note">Explique em linguagem simples o que essa referencia representa e por que ela importa.</div>
+                    </div>
+                    <details class="advanced-block">
+                        <summary>Campos adicionais</summary>
+                        <div class="inline-help">Use apenas se quiser ligar esta referencia a um projeto, uma run ou um caminho especifico.</div>
+                    <div class="field-grid" style="margin-top: 12px;">
+                        <div>
+                            <label>Caminho relativo</label>
+                            <input type="text" name="reference_relative_path" value="{{ form_state.get('reference_relative_path', '') }}" placeholder="references/images/cena_01.png">
+                            <div class="field-note">Opcional. Caminho do arquivo dentro da pasta do projeto.</div>
+                        </div>
+                        <div>
+                            <label>Tags</label>
+                            <input type="text" name="reference_tags" value="{{ form_state.get('reference_tags', '') }}" placeholder="heroina, biblioteca">
+                            <div class="field-note">Palavras curtas para facilitar busca e agrupamento.</div>
+                        </div>
+                    </div>
+                    <details style="margin-top: 12px;">
+                        <summary>Metadata JSON</summary>
+                        <textarea name="reference_metadata_json">{{ form_state.get('reference_metadata_json', '') }}</textarea>
+                    </details>
+                    </details>
+                    <div class="actions">
+                        <button type="submit" class="btn">Salvar referencia</button>
+                    </div>
+                </form>
+            </div>
+        </section>
+            </div>
+
+            <div class="tab-panel" data-tab-group="context" data-tab-panel="imports">
+        <section class="cards">
+            <div class="panel">
+                <h3>Importar outro projeto</h3>
+                <p class="subtle">
+                    O import registra um manifesto-ponta com seletores. O snapshot continua opcional,
+                    apenas quando um asset for promovido ou congelado no projeto atual.
+                </p>
+                <div class="guide-box">
+                    <strong>Uso recomendado</strong>
+                    <p>
+                        So use esta area se voce realmente quiser reaproveitar parte de outro projeto.
+                        Na maior parte do tempo, voce pode ignorar este bloco.
+                    </p>
+                </div>
+                <form method="post">
+                    <input type="hidden" name="form_action" value="add_imported_project">
+                    <input type="hidden" name="current_project_id" value="{{ current_project_id or '' }}">
+                    <div class="field-grid">
+                        <div>
+                            <label>Projeto de origem</label>
+                            <select name="import_source_project_id">
+                                <option value="">Selecione...</option>
+                                {% for project in available_import_projects %}
+                                <option value="{{ project.project_id }}" {% if form_state.get('import_source_project_id', '') == project.project_id %}selected{% endif %}>
+                                    {{ project.name }} ({{ project.project_id }})
+                                </option>
+                                {% endfor %}
+                            </select>
+                            <div class="field-note">Escolha o projeto de onde voce quer reaproveitar imagens.</div>
+                        </div>
+                        <div>
+                            <label>Alias</label>
+                            <input type="text" name="import_alias" value="{{ form_state.get('import_alias', '') }}">
+                            <div class="field-note">Opcional. Se deixar vazio, o ScoreIA usa o nome do projeto de origem.</div>
+                        </div>
+                    </div>
+                    <div class="actions">
+                        <button type="submit" class="btn-secondary" onclick="this.form.querySelector('[name=&quot;form_action&quot;]').value='preview_import_source'">Ver imagens do projeto</button>
+                    </div>
+                    {% if import_source_bundle %}
+                    <div class="guide-box" style="margin-top: 16px;">
+                        <strong>Selecione as imagens para importar</strong>
+                        <p>
+                            Escolha as referencias visuais que devem ser reaproveitadas neste projeto.
+                            O ScoreIA vai registrar um import apontando exatamente para esses itens.
+                        </p>
+                    </div>
+                    {% if import_source_image_candidates %}
+                    <div class="preview-grid" style="margin-top: 16px;">
+                        {% for item in import_source_image_candidates %}
+                        <label class="preview-card" style="cursor: pointer;">
+                            <img src="{{ item.image_url }}" alt="{{ item.caption }}">
+                            <div class="preview-meta">
+                                <div><strong>{{ item.caption }}</strong></div>
+                                <div>{{ item.item_type }}{% if item.role %} - {{ item.role }}{% endif %}</div>
+                                <div><code>{{ item.item_id }}</code></div>
+                            </div>
+                            {% if item.item_type == 'reference' %}
+                            <input type="checkbox" name="selected_reference_ids" value="{{ item.item_id }}" {% if item.item_id in request.form.getlist('selected_reference_ids') %}checked{% endif %}>
+                            {% else %}
+                            <input type="checkbox" name="selected_promoted_asset_ids" value="{{ item.item_id }}" {% if item.item_id in request.form.getlist('selected_promoted_asset_ids') %}checked{% endif %}>
+                            {% endif %}
+                        </label>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="inline-help" style="margin-top: 16px;">
+                        Este projeto nao tem imagens elegiveis para importacao visual ainda.
+                    </div>
+                    {% endif %}
+                    <details class="advanced-block" style="margin-top: 16px;">
+                        <summary>Notas opcionais</summary>
+                        <div style="margin-top: 12px;">
+                            <label>Notas</label>
+                            <textarea name="import_notes">{{ form_state.get('import_notes', '') }}</textarea>
+                        </div>
+                        <details style="margin-top: 12px;">
+                            <summary>Metadata JSON</summary>
+                            <textarea name="import_metadata_json">{{ form_state.get('import_metadata_json', '') }}</textarea>
+                        </details>
+                    </details>
+                    <div class="actions">
+                        <button type="submit" class="btn" onclick="this.form.querySelector('[name=&quot;form_action&quot;]').value='add_imported_project'">Importar imagens selecionadas</button>
+                    </div>
+                    {% endif %}
+                </form>
+            </div>
+
+            <div class="panel">
+                <h3>Contexto derivado</h3>
+                <div class="guide-box">
+                    <strong>Quando usar</strong>
+                    <p>
+                        Use para registrar resumos, transcricoes ou contexto extraido de texto, audio ou video.
+                        Isso ajuda a manter a historia e o clima do projeto por perto.
+                    </p>
+                </div>
+                <form method="post">
+                    <input type="hidden" name="form_action" value="add_derived_context">
+                    <input type="hidden" name="current_project_id" value="{{ current_project_id or '' }}">
+                    <div class="field-grid">
+                        <div>
+                            <label>Source type</label>
+                            <select name="derived_source_type">
+                                {% for value, label in derived_source_types %}
+                                <option value="{{ value }}" {% if form_state.get('derived_source_type', 'text') == value %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                            <div class="field-note">Tipo do material que originou esse contexto.</div>
+                        </div>
+                        <div>
+                            <label>Label</label>
+                            <input type="text" name="derived_label" value="{{ form_state.get('derived_label', '') }}">
+                            <div class="field-note">Nome curto para identificar este contexto.</div>
+                        </div>
+                        <div>
+                            <label>Caminho relativo</label>
+                            <input type="text" name="derived_relative_path" value="{{ form_state.get('derived_relative_path', '') }}" placeholder="derived_context/summaries/ato_1.txt">
+                            <div class="field-note">Opcional. Caminho do arquivo salvo no projeto.</div>
+                        </div>
+                    </div>
+                    <div style="margin-top: 12px;">
+                        <label>Resumo</label>
+                        <textarea name="derived_summary">{{ form_state.get('derived_summary', '') }}</textarea>
+                        <div class="field-note">Resumo do material em linguagem simples.</div>
+                    </div>
+                    <details class="advanced-block">
+                        <summary>Campos adicionais</summary>
+                        <div style="margin-top: 12px;">
+                            <label>source_reference_ids</label>
+                            <input type="text" name="derived_source_reference_ids" value="{{ form_state.get('derived_source_reference_ids', '') }}" placeholder="ref_001, ref_004">
+                        </div>
+                    <details style="margin-top: 12px;">
+                        <summary>Metadata JSON</summary>
+                        <textarea name="derived_metadata_json">{{ form_state.get('derived_metadata_json', '') }}</textarea>
+                    </details>
+                    </details>
+                    <div class="actions">
+                        <button type="submit" class="btn">Salvar contexto</button>
+                    </div>
+                </form>
+            </div>
+        </section>
+            </div>
+
+            <div class="tab-panel" data-tab-group="context" data-tab-panel="library">
+        <section class="cards">
+            <div class="panel">
+                <h3>Working set</h3>
+                <p class="subtle">Use working sets para montar subconjuntos ativos do projeto antes da geracao.</p>
+                <div class="guide-box">
+                    <strong>Uso simples</strong>
+                    <p>
+                        Pense no working set como o pacote de contexto da proxima rodada. Se quiser algo bem simples,
+                        crie um nome, descreva o objetivo e depois selecione manualmente os IDs que deseja manter ativos.
+                    </p>
+                </div>
+                <form method="post">
+                    <input type="hidden" name="form_action" value="add_working_set">
+                    <input type="hidden" name="current_project_id" value="{{ current_project_id }}">
+                    <div class="field-grid">
+                        <div>
+                            <label>Label</label>
+                            <input type="text" name="working_set_label" value="{{ form_state.get('working_set_label', '') }}">
+                            <div class="field-note">Nome curto para este subconjunto. Ex.: <strong>capa principal</strong> ou <strong>capitulo 3</strong>.</div>
+                        </div>
+                    </div>
+                    <div style="margin-top: 12px;">
+                        <label>Descricao</label>
+                        <textarea name="working_set_description">{{ form_state.get('working_set_description', '') }}</textarea>
+                        <div class="field-note">Explique para que este working set sera usado.</div>
+                    </div>
+                    <details class="advanced-block">
+                        <summary>Selecao manual de itens</summary>
+                        <div class="inline-help">Use estes campos quando quiser montar o working set por IDs especificos.</div>
+                        <div class="field-grid" style="margin-top: 12px;">
+                            <div>
+                                <label>Reference ids</label>
+                                <input type="text" name="working_set_reference_ids" value="{{ form_state.get('working_set_reference_ids', '') }}">
+                            </div>
+                            <div>
+                                <label>Promoted asset ids</label>
+                                <input type="text" name="working_set_promoted_asset_ids" value="{{ form_state.get('working_set_promoted_asset_ids', '') }}">
+                            </div>
+                            <div>
+                                <label>Imported project ids</label>
+                                <input type="text" name="working_set_imported_project_ids" value="{{ form_state.get('working_set_imported_project_ids', '') }}">
+                            </div>
+                            <div>
+                                <label>Derived context ids</label>
+                                <input type="text" name="working_set_derived_context_ids" value="{{ form_state.get('working_set_derived_context_ids', '') }}">
+                            </div>
+                        </div>
+                    <details style="margin-top: 12px;">
+                        <summary>Metadata JSON</summary>
+                        <textarea name="working_set_metadata_json">{{ form_state.get('working_set_metadata_json', '') }}</textarea>
+                    </details>
+                    </details>
+                    <div class="checkbox-row">
+                        <input type="checkbox" id="working_set_set_active" name="working_set_set_active" {% if form_state.get('working_set_set_active') == 'on' %}checked{% endif %}>
+                        <label for="working_set_set_active">Definir este working set como ativo</label>
+                    </div>
+                    <div class="actions">
+                        <button type="submit" class="btn">Salvar working set</button>
+                    </div>
+                </form>
+            </div>
+        </section>
+
+        <section class="cards">
+            <div class="panel panel-alt">
+                <h3>Biblioteca do projeto</h3>
+                <p class="subtle">
+                    Esta area mostra tudo o que ja foi salvo. Use como consulta rapida e para reativar itens quando necessario.
+                </p>
+                <div class="library-toolbar">
+                    <div>
+                        <label for="library-filter-input">Buscar na biblioteca</label>
+                        <input type="text" id="library-filter-input" data-library-filter-input placeholder="Digite nome, tag, papel, resumo ou ID">
+                        <div class="field-note">A busca filtra os itens listados abaixo sem alterar nada no projeto.</div>
+                    </div>
+                    <div class="actions">
+                        <button type="button" class="btn-secondary" data-library-clear>Limpar busca</button>
+                    </div>
+                    <div class="inline-help" id="library-filter-status">Mostrando todos os itens da biblioteca.</div>
+                </div>
+            </div>
+            <div class="panel" data-library-section="visual_bibles">
+                <h3>Visual bibles versionados</h3>
+                {% set items = current_bundle["manifests"]["visual_bibles"]["items"] %}
+                {% if items %}
+                    {% for item in items|reverse %}
+                    <div class="item" data-library-item data-library-text="{{ item.label }} {{ item.version_id }} {{ item.summary or '' }}">
+                        <h4>{{ item.label }}</h4>
+                        <p class="meta">
+                            <code>{{ item.version_id }}</code> - {{ item.created_at }}
+                            {% if current_bundle.project.active_visual_bible_id == item.version_id %}- ativo{% endif %}
+                            {% if editing_visual_bible_id == item.version_id %}- em edicao{% endif %}
+                        </p>
+                        {% if item.summary %}
+                        <p>{{ item.summary }}</p>
+                        {% endif %}
+                        <p class="meta">
+                            personagens: {{ item.characters|length }} - ambientes: {{ item.environments|length }}
+                        </p>
+                        <form method="post">
+                            <input type="hidden" name="form_action" value="start_edit_visual_bible">
+                            <input type="hidden" name="current_project_id" value="{{ current_project_id or '' }}">
+                            <input type="hidden" name="editing_visual_bible_id" value="{{ item.version_id }}">
+                            <div class="actions">
+                                <button type="submit" class="btn-secondary">{% if editing_visual_bible_id == item.version_id %}Recarregar edicao{% else %}Editar{% endif %}</button>
+                            </div>
+                        </form>
+                        {% if current_bundle.project.active_visual_bible_id != item.version_id %}
+                        <form method="post">
+                            <input type="hidden" name="form_action" value="set_active_visual_bible">
+                            <input type="hidden" name="current_project_id" value="{{ current_project_id or '' }}">
+                            <input type="hidden" name="version_id" value="{{ item.version_id }}">
+                            <div class="actions">
+                                <button type="submit" class="btn-secondary">Tornar ativo</button>
+                            </div>
+                        </form>
+                        {% endif %}
+                        {% if item.style_profile %}
+                        <details>
+                            <summary>Style profile</summary>
+                            <pre>{{ item.style_profile | tojson(indent=2) }}</pre>
+                        </details>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                {% else %}
+                <div class="empty">Nenhum visual_bible registrado ainda.</div>
+                {% endif %}
+            </div>
+
+            <div class="panel" data-library-section="imports">
+                <h3>Projetos importados</h3>
+                {% set items = current_bundle["manifests"]["imported_projects"]["items"] %}
+                {% if items %}
+                    {% for item in items|reverse %}
+                    <div class="item" data-library-item data-library-text="{{ item.alias or item.source_project_id }} {{ item.import_id }} {{ item.notes or '' }} {{ item.selection_mode }} {{ item.snapshot_policy }}">
+                        <h4>{{ item.alias or item.source_project_id }}</h4>
+                        <p class="meta"><code>{{ item.import_id }}</code> - origem <code>{{ item.source_project_id }}</code></p>
+                        <p>{{ item.notes or 'Sem observacoes.' }}</p>
+                        <p class="meta">
+                            strategy: {{ item.import_strategy }} - snapshot: {{ item.snapshot_policy }} - mode: {{ item.selection_mode }}
+                        </p>
+                        <details>
+                            <summary>Selectors</summary>
+                            <pre>{{ item.selectors | tojson(indent=2) }}</pre>
+                        </details>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                <div class="empty">Nenhum projeto importado registrado ainda.</div>
+                {% endif %}
+            </div>
+
+            <div class="panel" data-library-section="references">
+                <h3>Referencias do projeto</h3>
+                {% set items = current_bundle["manifests"]["references"]["items"] %}
+                {% if items %}
+                    {% for item in items|reverse %}
+                    <div class="item" data-library-item data-library-text="{{ item.caption or item.reference_id }} {{ item.reference_id }} {{ item.source_type }} {{ item.role }} {{ (item.tags or []) | join(' ') }}">
+                        <h4>{{ item.caption or item.reference_id }}</h4>
+                        <p class="meta"><code>{{ item.reference_id }}</code> - {{ item.source_type }} - {{ item.role }}</p>
+                        {% if item.relative_path %}
+                        <p><code>{{ item.relative_path }}</code></p>
+                        {% if item.source_type == 'image' %}
+                        <div style="margin-top: 10px;">
+                            <img
+                                src="{{ url_for('serve_storage_file', storage='project', relative_path=current_project_id ~ '/' ~ item.relative_path.replace('\\', '/')) }}"
+                                alt="{{ item.caption or item.reference_id }}"
+                                style="display:block; width:100%; max-width:260px; aspect-ratio:1/1; object-fit:cover; border-radius:12px; border:1px solid #cebda8;"
+                            >
+                        </div>
+                        {% endif %}
+                        {% endif %}
+                        {% if item.tags %}
+                        <p class="meta">tags: {{ item.tags | join(', ') }}</p>
+                        {% endif %}
+                        {% if item.source_type == 'image' and item.relative_path %}
+                        <div class="quick-actions">
+                            <button
+                                type="button"
+                                class="quick-btn"
+                                data-quick-fill-field="img2img_init_image_path"
+                                data-quick-fill-value="projects/img_gen/{{ current_project_id }}/{{ item.relative_path.replace('\\', '/') }}"
+                                data-quick-fill-primary="generation"
+                                data-quick-fill-secondary="refine"
+                                data-quick-fill-label="Refino"
+                            >Usar no refino</button>
+                            <button
+                                type="button"
+                                class="quick-btn"
+                                data-quick-fill-field="inpaint_init_image_path"
+                                data-quick-fill-value="projects/img_gen/{{ current_project_id }}/{{ item.relative_path.replace('\\', '/') }}"
+                                data-quick-fill-primary="generation"
+                                data-quick-fill-secondary="inpaint"
+                                data-quick-fill-label="Inpainting"
+                            >Usar no inpainting</button>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                {% else %}
+                <div class="empty">Nenhuma referencia registrada ainda.</div>
+                {% endif %}
+            </div>
+
+            <div class="panel" data-library-section="promoted_assets">
+                <h3>Promoted assets</h3>
+                {% set items = current_bundle["manifests"]["promoted_assets"]["items"] %}
+                {% if items %}
+                    {% for item in items|reverse %}
+                    <div class="item" data-library-item data-library-text="{{ item.caption or item.asset_id }} {{ item.asset_id }} {{ item.asset_type }} {{ item.role }} {{ (item.tags or []) | join(' ') }}">
+                        <h4>{{ item.caption or item.asset_id }}</h4>
+                        <p class="meta"><code>{{ item.asset_id }}</code> - {{ item.asset_type }} - {{ item.role }}</p>
+                        {% if item.relative_path %}
+                        <p><code>{{ item.relative_path }}</code></p>
+                        {% if item.asset_type == 'image' %}
+                        <div style="margin-top: 10px;">
+                            <img
+                                src="{{ url_for('serve_storage_file', storage='project', relative_path=current_project_id ~ '/' ~ item.relative_path.replace('\\', '/')) }}"
+                                alt="{{ item.caption or item.asset_id }}"
+                                style="display:block; width:100%; max-width:260px; aspect-ratio:1/1; object-fit:cover; border-radius:12px; border:1px solid #cebda8;"
+                            >
+                        </div>
+                        {% endif %}
+                        {% endif %}
+                        {% if item.tags %}
+                        <p class="meta">tags: {{ item.tags | join(', ') }}</p>
+                        {% endif %}
+                        {% if item.asset_type == 'image' and item.relative_path %}
+                        <div class="quick-actions">
+                            <button
+                                type="button"
+                                class="quick-btn"
+                                data-quick-fill-field="img2img_init_image_path"
+                                data-quick-fill-value="projects/img_gen/{{ current_project_id }}/{{ item.relative_path.replace('\\', '/') }}"
+                                data-quick-fill-primary="generation"
+                                data-quick-fill-secondary="refine"
+                                data-quick-fill-label="Refino"
+                            >Usar no refino</button>
+                            <button
+                                type="button"
+                                class="quick-btn"
+                                data-quick-fill-field="inpaint_init_image_path"
+                                data-quick-fill-value="projects/img_gen/{{ current_project_id }}/{{ item.relative_path.replace('\\', '/') }}"
+                                data-quick-fill-primary="generation"
+                                data-quick-fill-secondary="inpaint"
+                                data-quick-fill-label="Inpainting"
+                            >Usar no inpainting</button>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                {% else %}
+                <div class="empty">Nenhum promoted asset registrado ainda.</div>
+                {% endif %}
+            </div>
+
+            <div class="panel" data-library-section="working_sets">
+                <h3>Working sets</h3>
+                {% set items = current_bundle["manifests"]["working_sets"]["items"] %}
+                {% if items %}
+                    {% for item in items|reverse %}
+                    <div class="item" data-library-item data-library-text="{{ item.label }} {{ item.working_set_id }} {{ item.description or '' }}">
+                        <h4>{{ item.label }}</h4>
+                        <p class="meta">
+                            <code>{{ item.working_set_id }}</code>
+                            {% if item.is_active %}- ativo{% endif %}
+                        </p>
+                        {% if item.description %}
+                        <p>{{ item.description }}</p>
+                        {% endif %}
+                        <p class="meta">
+                            refs: {{ item.reference_ids|length }} - imports: {{ item.imported_project_ids|length }} - contextos: {{ item.derived_context_ids|length }}
+                        </p>
+                        {% if not item.is_active %}
+                        <form method="post">
+                            <input type="hidden" name="form_action" value="set_active_working_set">
+                            <input type="hidden" name="current_project_id" value="{{ current_project_id }}">
+                            <input type="hidden" name="working_set_id" value="{{ item.working_set_id }}">
+                            <div class="actions">
+                                <button type="submit" class="btn-secondary">Tornar ativo</button>
+                            </div>
+                        </form>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                {% else %}
+                <div class="empty">Nenhum working set registrado ainda.</div>
+                {% endif %}
+            </div>
+
+            <div class="panel" data-library-section="derived_context">
+                <h3>Contextos derivados</h3>
+                {% set items = current_bundle["manifests"]["derived_context"]["items"] %}
+                {% if items %}
+                    {% for item in items|reverse %}
+                    <div class="item" data-library-item data-library-text="{{ item.label }} {{ item.context_id }} {{ item.source_type }} {{ item.summary or '' }}">
+                        <h4>{{ item.label }}</h4>
+                        <p class="meta"><code>{{ item.context_id }}</code> - {{ item.source_type }}</p>
+                        {% if item.summary %}
+                        <p>{{ item.summary }}</p>
+                        {% endif %}
+                        {% if item.relative_path %}
+                        <p><code>{{ item.relative_path }}</code></p>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                {% else %}
+                <div class="empty">Nenhum contexto derivado registrado ainda.</div>
+                {% endif %}
+            </div>
+        </section>
+            </div>
+        </div>
+        </div>
+        {% else %}
+        <div class="tab-panel" data-tab-group="primary" data-tab-panel="context">
+            <section class="panel">
+                <div class="empty">
+                    O contexto do projeto aparece aqui depois que voce abrir ou criar um projeto na aba <code>Projeto</code>.
+                </div>
+            </section>
+        </div>
+        {% endif %}
+        </div>
+
+        <datalist id="project-options">
+            {% for project in projects %}
+            <option value="{{ project.project_id }}">{{ project.name }}</option>
+            {% endfor %}
+        </datalist>
+
+        <datalist id="import-project-options">
+            {% for project in available_import_projects %}
+            <option value="{{ project.project_id }}">{{ project.name }}</option>
+            {% endfor %}
+        </datalist>
+
+        <datalist id="image-source-options">
+            {% for item in project_image_candidates %}
+            <option value="{{ item.path }}">{{ item.label }}</option>
+            {% endfor %}
+        </datalist>
+    </div>
+    <script>
+        (function () {
+            const defaultAliases = {
+                checkpoints: '{{ default_sd15_base_alias }}',
+                inpainting: '{{ default_sd15_inpainting_alias }}',
+                ip_adapter: '{{ default_sd15_ip_adapter_alias }}',
+                controlnet: '{{ default_sd15_controlnet_alias }}'
+            };
+            const serverInitialTabs = {
+                primary: '{{ initial_primary_tab or "" }}',
+                context: '{{ initial_context_tab or "" }}',
+                generation: '{{ initial_generation_tab or "" }}'
+            };
+
+            function activateTab(group, target) {
+                const buttons = document.querySelectorAll('[data-tab-group="' + group + '"][data-tab-target]');
+                const panels = document.querySelectorAll('[data-tab-group="' + group + '"][data-tab-panel]');
+                buttons.forEach((button) => {
+                    button.classList.toggle('is-active', button.dataset.tabTarget === target);
+                });
+                panels.forEach((panel) => {
+                    panel.classList.toggle('is-active', panel.dataset.tabPanel === target);
+                });
+                try {
+                    window.localStorage.setItem('scoreia.tab.' + group, target);
+                } catch (error) {
+                }
+            }
+
+            document.querySelectorAll('[data-tab-target]').forEach((button) => {
+                button.addEventListener('click', function () {
+                    activateTab(button.dataset.tabGroup, button.dataset.tabTarget);
+                });
+            });
+
+            document.querySelectorAll('form').forEach((form) => {
+                form.addEventListener('submit', function () {
+                    const activePrimary = document.querySelector('[data-tab-group="primary"][data-tab-target].is-active');
+                    const activeContext = document.querySelector('[data-tab-group="context"][data-tab-target].is-active');
+                    const activeGeneration = document.querySelector('[data-tab-group="generation"][data-tab-target].is-active');
+
+                    const upsertHidden = function (name, value) {
+                        let field = form.querySelector('input[name="' + name + '"]');
+                        if (!field) {
+                            field = document.createElement('input');
+                            field.type = 'hidden';
+                            field.name = name;
+                            form.appendChild(field);
+                        }
+                        field.value = value || '';
+                    };
+
+                    upsertHidden('active_primary_tab', activePrimary ? activePrimary.dataset.tabTarget : '');
+                    upsertHidden('active_context_tab', activeContext ? activeContext.dataset.tabTarget : '');
+                    upsertHidden('active_generation_tab', activeGeneration ? activeGeneration.dataset.tabTarget : '');
+                });
+            });
+
+            ['primary', 'context', 'generation'].forEach((group) => {
+                let preferred = null;
+                try {
+                    preferred = window.localStorage.getItem('scoreia.tab.' + group);
+                } catch (error) {
+                }
+
+                const fallbackButton = document.querySelector('[data-tab-group="' + group + '"][data-tab-target].is-active')
+                    || document.querySelector('[data-tab-group="' + group + '"][data-tab-target]');
+                const serverTarget = serverInitialTabs[group] || null;
+                const initialTarget = group === 'primary'
+                    ? (serverTarget || 'generation')
+                    : (serverTarget || preferred || (fallbackButton ? fallbackButton.dataset.tabTarget : null));
+                if (initialTarget) {
+                    activateTab(group, initialTarget);
+                }
+            });
+
+            const modelCategoryField = document.querySelector('select[name="model_category"]');
+            const modelAliasField = document.querySelector('input[name="model_alias"]');
+            if (modelCategoryField && modelAliasField) {
+                const syncModelAlias = function () {
+                    const nextValue = defaultAliases[modelCategoryField.value] || '';
+                    if (nextValue) {
+                        modelAliasField.value = nextValue;
+                    }
+                };
+                modelCategoryField.addEventListener('change', syncModelAlias);
+                if (!modelAliasField.value.trim()) {
+                    syncModelAlias();
+                }
+            }
+
+            const quickFillStatus = document.getElementById('quick-fill-status');
+            document.querySelectorAll('[data-quick-fill-field]').forEach((button) => {
+                button.addEventListener('click', function () {
+                    const fieldName = button.dataset.quickFillField;
+                    const fieldValue = button.dataset.quickFillValue || '';
+                    const primaryTab = button.dataset.quickFillPrimary;
+                    const secondaryTab = button.dataset.quickFillSecondary;
+                    const targetLabel = button.dataset.quickFillLabel || 'destino';
+                    const targetField = document.querySelector('[name="' + fieldName + '"]');
+                    if (!targetField) {
+                        return;
+                    }
+                    targetField.value = fieldValue;
+                    targetField.dispatchEvent(new Event('input', { bubbles: true }));
+                    if (primaryTab) {
+                        activateTab('primary', primaryTab);
+                    }
+                    if (secondaryTab) {
+                        activateTab('generation', secondaryTab);
+                    }
+                    targetField.focus();
+                    targetField.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    if (quickFillStatus) {
+                        quickFillStatus.textContent = 'Imagem enviada para ' + targetLabel + '. Confira o campo preenchido antes de executar.';
+                    }
+                });
+            });
+
+            const libraryFilterInput = document.querySelector('[data-library-filter-input]');
+            const libraryClearButton = document.querySelector('[data-library-clear]');
+            const libraryFilterStatus = document.getElementById('library-filter-status');
+            const libraryItems = Array.from(document.querySelectorAll('[data-library-item]'));
+            const librarySections = Array.from(document.querySelectorAll('[data-library-section]'));
+
+            const updateLibraryFilter = function () {
+                if (!libraryFilterInput) {
+                    return;
+                }
+                const query = libraryFilterInput.value.trim().toLowerCase();
+                let visibleCount = 0;
+
+                libraryItems.forEach((item) => {
+                    const haystack = (item.dataset.libraryText || '').toLowerCase();
+                    const matches = !query || haystack.includes(query);
+                    item.classList.toggle('is-hidden', !matches);
+                    if (matches) {
+                        visibleCount += 1;
+                    }
+                });
+
+                librarySections.forEach((section) => {
+                    const sectionItems = Array.from(section.querySelectorAll('[data-library-item]'));
+                    if (!sectionItems.length) {
+                        section.classList.remove('is-filter-hidden');
+                        return;
+                    }
+                    const sectionHasVisibleItem = sectionItems.some((item) => !item.classList.contains('is-hidden'));
+                    section.classList.toggle('is-filter-hidden', !!query && !sectionHasVisibleItem);
+                });
+
+                if (libraryFilterStatus) {
+                    if (!query) {
+                        libraryFilterStatus.textContent = 'Mostrando todos os itens da biblioteca.';
+                    } else {
+                        libraryFilterStatus.textContent = 'Busca ativa: ' + visibleCount + ' item(ns) encontrado(s).';
+                    }
+                }
+            };
+
+            if (libraryFilterInput) {
+                libraryFilterInput.addEventListener('input', updateLibraryFilter);
+                updateLibraryFilter();
+            }
+
+            if (libraryClearButton && libraryFilterInput) {
+                libraryClearButton.addEventListener('click', function () {
+                    libraryFilterInput.value = '';
+                    updateLibraryFilter();
+                    libraryFilterInput.focus();
+                });
+            }
+
+            const setupSimpleMode = function (formAction, selectors, options) {
+                const hiddenAction = document.querySelector('input[name="form_action"][value="' + formAction + '"]');
+                if (!hiddenAction) {
+                    return;
+                }
+                const form = hiddenAction.closest('form');
+                if (!form) {
+                    return;
+                }
+
+                const blocks = [];
+                selectors.forEach((selector) => {
+                    form.querySelectorAll(selector).forEach((node) => {
+                        const block = node.tagName.toLowerCase() === 'details'
+                            ? node
+                            : node.closest('div');
+                        if (block && !blocks.includes(block)) {
+                            blocks.push(block);
+                        }
+                    });
+                });
+
+                if (!blocks.length) {
+                    return;
+                }
+
+                let hidden = true;
+                blocks.forEach((block) => block.classList.add('simple-hidden'));
+
+                const box = document.createElement('div');
+                box.className = 'simple-mode-box';
+
+                const note = document.createElement('div');
+                note.className = 'inline-help';
+                note.textContent = options.note;
+                box.appendChild(note);
+
+                if (options.showButton !== false) {
+                    const button = document.createElement('button');
+                    button.type = 'button';
+                    button.className = 'btn-secondary';
+                    button.textContent = options.showLabel;
+                    button.addEventListener('click', function () {
+                        hidden = !hidden;
+                        blocks.forEach((block) => block.classList.toggle('simple-hidden', hidden));
+                        button.textContent = hidden ? options.showLabel : options.hideLabel;
+                    });
+
+                    const actions = document.createElement('div');
+                    actions.className = 'actions';
+                    actions.appendChild(button);
+                    box.appendChild(actions);
+                }
+
+                const submitActions = form.querySelector('.actions');
+                if (submitActions) {
+                    form.insertBefore(box, submitActions);
+                } else {
+                    form.appendChild(box);
+                }
+            };
+
+            setupSimpleMode(
+                'generate_txt2img',
+                [
+                    'details.advanced-block',
+                ],
+                {
+                    note: 'Modo simples ativo: para gerar uma imagem, basta escrever o prompt e clicar em Gerar imagem.',
+                    showLabel: 'Mostrar personalizacao',
+                    hideLabel: 'Ocultar personalizacao',
+                }
+            );
+
+            setupSimpleMode(
+                'generate_img2img',
+                [
+                    'select[name="img2img_model_alias"]',
+                    'input[name="img2img_model_alias"]',
+                    'input[name="img2img_width"]',
+                    'input[name="img2img_height"]',
+                    'input[name="img2img_strength"]',
+                    'input[name="img2img_num_inference_steps"]',
+                    'input[name="img2img_guidance_scale"]',
+                    'input[name="img2img_num_images"]',
+                    'textarea[name="img2img_negative_prompt"]',
+                    'details.advanced-block',
+                ],
+                {
+                    note: 'Modo simples ativo: aqui voce so precisa da imagem-base e, se quiser, um prompt curto descrevendo o ajuste. O restante ja esta ajustado automaticamente para a sua maquina.',
+                    showLabel: 'Mostrar personalizacao do refino',
+                    hideLabel: 'Ocultar personalizacao do refino',
+                    showButton: false,
+                }
+            );
+
+            setupSimpleMode(
+                'generate_inpainting',
+                [
+                    'select[name="inpaint_model_alias"]',
+                    'input[name="inpaint_model_alias"]',
+                    'input[name="inpaint_width"]',
+                    'input[name="inpaint_height"]',
+                    'input[name="inpaint_strength"]',
+                    'input[name="inpaint_num_inference_steps"]',
+                    'input[name="inpaint_guidance_scale"]',
+                    'input[name="inpaint_num_images"]',
+                    'textarea[name="inpaint_negative_prompt"]',
+                    'details.advanced-block',
+                ],
+                {
+                    note: 'Modo simples ativo: aqui voce so precisa da imagem-base, da mascara e do prompt da alteracao. O restante ja esta ajustado automaticamente para a sua maquina.',
+                    showLabel: 'Mostrar personalizacao do inpainting',
+                    hideLabel: 'Ocultar personalizacao do inpainting',
+                    showButton: false,
+                }
+            );
+        })();
+    </script>
+</body>
+</html>

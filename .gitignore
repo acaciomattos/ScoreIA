@@ -141,11 +141,14 @@ celerybeat.pid
 .venv
 .venv310
 .venv312
+artifacts/
 env/
 venv/
 ENV/
 env.bak/
 venv.bak/
+projects/
+tools/mpv/
 
 # Spyder project settings
 .spyderproject
@@ -203,6 +206,31 @@ cython_debug/
 #  refer to https://docs.cursor.com/context/ignore-files
 .cursorignore
 .cursorindexingignore
+
+# Local model weights and external visual runtimes
+models/**
+!models/README.md
+!models/img_gen/
+!models/img_gen/README.md
+!models/img_gen/checkpoints/
+!models/img_gen/checkpoints/.gitkeep
+!models/img_gen/inpainting/
+!models/img_gen/inpainting/.gitkeep
+!models/img_gen/controlnet/
+!models/img_gen/controlnet/.gitkeep
+!models/img_gen/ip_adapter/
+!models/img_gen/ip_adapter/.gitkeep
+!models/img_gen/sam/
+!models/img_gen/sam/.gitkeep
+!models/img_gen/upscalers/
+!models/img_gen/upscalers/.gitkeep
+!models/img_gen/cache/
+!models/img_gen/cache/.gitkeep
+!models/audio_gen/whisper/ggml-base.bin
+
+
+external/ComfyUI/**
+!external/README.md
 
 # Marimo
 marimo/_static/
