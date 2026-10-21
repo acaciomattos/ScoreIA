@@ -12,10 +12,13 @@ WEBAPP_HOST = os.getenv("SCOREIA_WEBAPP_HOST", "127.0.0.1")
 WEBAPP_PORT = int(os.getenv("SCOREIA_WEBAPP_PORT", "5000"))
 IMG_WEBAPP_HOST = os.getenv("SCOREIA_IMG_WEBAPP_HOST", WEBAPP_HOST)
 IMG_WEBAPP_PORT = int(os.getenv("SCOREIA_IMG_WEBAPP_PORT", "5001"))
+AUDIO_WEBAPP_HOST = os.getenv("SCOREIA_AUDIO_WEBAPP_HOST", WEBAPP_HOST)
+AUDIO_WEBAPP_PORT = int(os.getenv("SCOREIA_AUDIO_WEBAPP_PORT", "5002"))
 
 agente = Agente()
 _webapp_thread = None
 _img_webapp_thread = None
+_audio_webapp_thread = None
 
 
 def _webapp_url():
@@ -24,6 +27,10 @@ def _webapp_url():
 
 def _img_webapp_url():
     return f"http://{IMG_WEBAPP_HOST}:{IMG_WEBAPP_PORT}"
+
+
+def _audio_webapp_url():
+    return f"http://{AUDIO_WEBAPP_HOST}:{AUDIO_WEBAPP_PORT}"
 
 
 def _is_webapp_running(host=WEBAPP_HOST, port=WEBAPP_PORT, timeout=0.3):
@@ -130,6 +137,55 @@ def _abrir_interface_imagem():
     }
 
 
+def _abrir_interface_audio():
+    global _audio_webapp_thread
+
+    url = _audio_webapp_url()
+    if _is_webapp_running(host=AUDIO_WEBAPP_HOST, port=AUDIO_WEBAPP_PORT):
+        webbrowser.open(url)
+        return {
+            "mensagem": f"Interface de audio ja estava ativa em {url}.",
+            "artefatos": {"url": url, "status": "already_running"},
+        }
+
+    from tools.audio_gen.webapp.app import app
+
+    def _run_webapp():
+        app.run(
+            host=AUDIO_WEBAPP_HOST,
+            port=AUDIO_WEBAPP_PORT,
+            debug=False,
+            use_reloader=False,
+        )
+
+    _audio_webapp_thread = threading.Thread(
+        target=_run_webapp,
+        name="scoreia-audio-webapp",
+        daemon=True,
+    )
+    _audio_webapp_thread.start()
+
+    for _ in range(30):
+        if _is_webapp_running(host=AUDIO_WEBAPP_HOST, port=AUDIO_WEBAPP_PORT):
+            break
+        time.sleep(0.2)
+
+    if _is_webapp_running(host=AUDIO_WEBAPP_HOST, port=AUDIO_WEBAPP_PORT):
+        webbrowser.open(url)
+        return {
+            "mensagem": f"Interface de audio iniciada em {url}.",
+            "artefatos": {"url": url, "status": "started"},
+        }
+
+    return {
+        "mensagem": (
+            f"A tentativa de iniciar a interface de audio foi disparada, mas a porta {AUDIO_WEBAPP_PORT} "
+            f"ainda nao respondeu. Verifique manualmente em {url}."
+        ),
+        "artefatos": {"url": url, "status": "startup_pending"},
+    }
+
+
 def _diagnosticar_audio():
     from tools.audio_gen.runtime_env import collect_runtime_status, format_runtime_status
 
@@ -189,9 +245,16 @@ def handle_interacao(agent, mensagem):
         artefatos = abertura["artefatos"]
 
     elif msg_lower in {"audio", "áudio", "gerar audio", "gerar áudio"}:
+        abertura = _abrir_interface_audio()
+        resposta = abertura["mensagem"]
+        tipo_interacao = "audio"
+        tema = "projetos de audio"
+        artefatos = abertura["artefatos"]
+
+    elif msg_lower in {"audio status", "diagnosticar audio", "diagnosticar áudio"}:
         diagnostico = _diagnosticar_audio()
         resposta = diagnostico["mensagem"]
-        tipo_interacao = "audio"
+        tipo_interacao = "audio_diagnostico"
         tema = "projetos de audio"
         artefatos = diagnostico["artefatos"]
 

@@ -1,0 +1,868 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ScoreIA - Fase 7 Audio</title>
+    <style>
+        :root {
+            --bg: #f2ede4;
+            --panel: #fffdf9;
+            --panel-alt: #f6f0e6;
+            --line: #d5c6b3;
+            --text: #2b2218;
+            --muted: #6d5f4e;
+            --accent: #9a4f1c;
+            --accent-soft: #f2dfcf;
+            --success-bg: #edf6ef;
+            --success-line: #9ec2a4;
+            --success-text: #1f5632;
+            --error-bg: #fff1ec;
+            --error-line: #e2aaa0;
+            --error-text: #8b3020;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            padding: 24px;
+            background:
+                radial-gradient(circle at top right, rgba(154, 79, 28, 0.14), transparent 34%),
+                radial-gradient(circle at bottom left, rgba(68, 98, 118, 0.1), transparent 28%),
+                linear-gradient(180deg, #fcf7ef 0%, var(--bg) 100%);
+            color: var(--text);
+            font-family: "Segoe UI", Tahoma, sans-serif;
+        }
+        .page { max-width: 1480px; margin: 0 auto; }
+        .hero {
+            padding: 24px;
+            border: 1px solid var(--line);
+            border-radius: 22px;
+            background: linear-gradient(135deg, #fff7ea 0%, #fffdf9 55%, #f3e6d9 100%);
+            box-shadow: 0 18px 40px rgba(74, 52, 30, 0.08);
+        }
+        .hero h1 { margin: 0 0 8px; font-size: 31px; }
+        .hero p { margin: 0; color: var(--muted); line-height: 1.55; max-width: 980px; }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+            gap: 12px;
+            margin-top: 16px;
+        }
+        .stat {
+            padding: 12px 14px;
+            border: 1px solid var(--line);
+            border-radius: 14px;
+            background: rgba(255, 250, 244, 0.9);
+        }
+        .stat span { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; }
+        .stat strong { display: block; margin-top: 4px; font-size: 24px; }
+        .layout {
+            display: grid;
+            grid-template-columns: minmax(300px, 360px) minmax(0, 1fr);
+            gap: 16px;
+            margin-top: 16px;
+        }
+        @media (max-width: 1080px) {
+            .layout { grid-template-columns: 1fr; }
+        }
+        .panel {
+            padding: 18px;
+            border: 1px solid var(--line);
+            border-radius: 18px;
+            background: var(--panel);
+            box-shadow: 0 10px 24px rgba(66, 46, 27, 0.05);
+        }
+        .panel-alt { background: var(--panel-alt); }
+        .panel h2, .panel h3 { margin: 0 0 12px; }
+        .panel h2 { font-size: 20px; }
+        .subtle { color: var(--muted); font-size: 13px; line-height: 1.5; }
+        .stack { display: grid; gap: 16px; }
+        .section-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 16px;
+        }
+        label {
+            display: block;
+            margin-bottom: 4px;
+            font-size: 12px;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        input[type="text"], input[type="number"], select, textarea {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #ccbca8;
+            border-radius: 11px;
+            background: #fff;
+            color: var(--text);
+        }
+        textarea {
+            min-height: 88px;
+            resize: vertical;
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 12px;
+            line-height: 1.45;
+        }
+        input[type="file"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px dashed #c9b59e;
+            border-radius: 11px;
+            background: #fffaf4;
+        }
+        .field-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 10px;
+        }
+        .actions {
+            margin-top: 12px;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .btn, .btn-secondary {
+            border-radius: 11px;
+            padding: 10px 14px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        .btn {
+            border: 1px solid var(--accent);
+            background: var(--accent);
+            color: #fff;
+        }
+        .btn-secondary {
+            border: 1px solid #c1a58a;
+            background: #fff8f0;
+            color: var(--text);
+        }
+        .checkbox-row {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            margin-top: 8px;
+        }
+        .checkbox-row label {
+            margin: 0;
+            color: var(--text);
+            text-transform: none;
+            letter-spacing: 0;
+            font-size: 13px;
+        }
+        .alert {
+            margin-top: 16px;
+            padding: 14px 16px;
+            border-radius: 12px;
+            border: 1px solid;
+            line-height: 1.45;
+        }
+        .alert-success { background: var(--success-bg); border-color: var(--success-line); color: var(--success-text); }
+        .alert-error { background: var(--error-bg); border-color: var(--error-line); color: var(--error-text); }
+        .pill {
+            display: inline-flex;
+            align-items: center;
+            padding: 4px 8px;
+            border-radius: 999px;
+            border: 1px solid var(--line);
+            background: #fff;
+            font-size: 12px;
+            color: var(--muted);
+            margin: 4px 6px 0 0;
+        }
+        .item {
+            padding: 12px;
+            border: 1px solid var(--line);
+            border-radius: 14px;
+            background: #fffefb;
+            margin-top: 10px;
+        }
+        .item h4 { margin: 0 0 6px; font-size: 15px; }
+        .meta { color: var(--muted); font-size: 12px; line-height: 1.45; }
+        .empty {
+            padding: 16px;
+            border: 1px dashed var(--line);
+            border-radius: 14px;
+            color: var(--muted);
+            background: #fffaf5;
+        }
+        .scroll-list {
+            max-height: 360px;
+            overflow: auto;
+            padding-right: 4px;
+        }
+        details { margin-top: 10px; }
+        summary {
+            cursor: pointer;
+            color: var(--accent);
+            font-weight: 600;
+        }
+        pre {
+            margin: 8px 0 0;
+            padding: 12px;
+            border-radius: 12px;
+            background: #f5eee3;
+            overflow-x: auto;
+            font-size: 12px;
+            line-height: 1.5;
+        }
+        audio { width: 100%; margin-top: 8px; }
+        .result-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 12px;
+        }
+        .audio-candidate {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            padding: 8px 10px;
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            background: #fff9f2;
+            margin-top: 8px;
+        }
+        .audio-candidate a { color: var(--accent); text-decoration: none; font-weight: 600; }
+        .project-link {
+            display: block;
+            padding: 10px 12px;
+            border-radius: 12px;
+            border: 1px solid var(--line);
+            background: #fffaf3;
+            color: var(--text);
+            text-decoration: none;
+            margin-top: 10px;
+        }
+        .project-link.active {
+            border-color: var(--accent);
+            background: var(--accent-soft);
+        }
+        .inline-choices {
+            display: grid;
+            gap: 8px;
+            margin-top: 8px;
+        }
+        .choice {
+            padding: 8px 10px;
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            background: #fff9f2;
+        }
+    </style>
+</head>
+<body>
+    <div class="page">
+        <section class="hero">
+            <h1>ScoreIA · Fase 7 Audio</h1>
+            <p>
+                Interface operacional do pipeline multimodal de audio: projeto, referencias, captura assistida,
+                blueprint, render instrumental e vocal-fit no mesmo fluxo.
+            </p>
+            <div class="stats">
+                <div class="stat"><span>Projetos</span><strong>{{ projects|length }}</strong></div>
+                <div class="stat"><span>Referencias</span><strong>{{ counts.references }}</strong></div>
+                <div class="stat"><span>Blueprints</span><strong>{{ counts.blueprints }}</strong></div>
+                <div class="stat"><span>Capturas</span><strong>{{ counts.captures }}</strong></div>
+                <div class="stat"><span>Working Sets</span><strong>{{ counts.working_sets }}</strong></div>
+            </div>
+        </section>
+
+        {% if success_message %}
+            <div class="alert alert-success">{{ success_message }}</div>
+        {% endif %}
+        {% if error_message %}
+            <div class="alert alert-error">{{ error_message }}</div>
+        {% endif %}
+
+        <div class="layout">
+            <aside class="stack">
+                <section class="panel">
+                    <h2>Projetos</h2>
+                    <p class="subtle">Selecione um projeto existente ou crie um novo ponto de trabalho para a fase 7.</p>
+                    {% if projects %}
+                        <div class="scroll-list">
+                            {% for item in projects %}
+                                <a class="project-link {% if item.project_id == current_project_id %}active{% endif %}" href="/?project_id={{ item.project_id }}">
+                                    <strong>{{ item.name }}</strong><br>
+                                    <span class="meta">{{ item.project_id }} · {{ item.project_type }}</span>
+                                </a>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="empty">Ainda nao existem projetos de audio.</div>
+                    {% endif %}
+                </section>
+
+                <section class="panel panel-alt">
+                    <h2>Criar Projeto</h2>
+                    <form method="post">
+                        <input type="hidden" name="action" value="create_project">
+                        <div class="field-grid">
+                            <div>
+                                <label>Nome</label>
+                                <input type="text" name="project_name" value="{{ form_state.get('project_name', '') }}" placeholder="Boom bap references">
+                            </div>
+                            <div>
+                                <label>Tipo</label>
+                                <select name="project_type">
+                                    {% for value, label in project_types %}
+                                        <option value="{{ value }}" {% if form_state.get('project_type', 'music_production') == value %}selected{% endif %}>{{ label }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="field-grid">
+                            <div>
+                                <label>Project ID opcional</label>
+                                <input type="text" name="project_id_override" value="{{ form_state.get('project_id_override', '') }}" placeholder="phase7-demo">
+                            </div>
+                            <div>
+                                <label>Tags CSV</label>
+                                <input type="text" name="project_tags" value="{{ form_state.get('project_tags', '') }}" placeholder="boom bap, sample-based">
+                            </div>
+                        </div>
+                        <div>
+                            <label>Descricao</label>
+                            <textarea name="project_description" placeholder="Objetivo musical, referencias e observacoes.">{{ form_state.get('project_description', '') }}</textarea>
+                        </div>
+                        <div class="actions">
+                            <button class="btn" type="submit">Criar projeto</button>
+                        </div>
+                    </form>
+                </section>
+
+                <section class="panel">
+                    <h2>Runtime</h2>
+                    <p class="subtle">Snapshot do ambiente local e dos dispositivos que a fase 7 consegue enxergar agora.</p>
+                    <div class="meta">
+                        ffmpeg: {{ runtime_status.get('ffmpeg', {}).get('status', 'unknown') }}<br>
+                        ffprobe: {{ runtime_status.get('ffprobe', {}).get('status', 'unknown') }}<br>
+                        torch: {{ runtime_status.get('torch', {}).get('status', 'unknown') }}<br>
+                        demucs: {{ runtime_status.get('demucs', {}).get('status', 'unknown') }}
+                    </div>
+                    <details>
+                        <summary>Loopback devices ({{ loopback_devices.get('count', 0) }})</summary>
+                        <pre>{{ loopback_devices | tojson(indent=2) }}</pre>
+                    </details>
+                    <details>
+                        <summary>Routing devices</summary>
+                        <pre>{{ routing_devices | tojson(indent=2) }}</pre>
+                    </details>
+                    <details>
+                        <summary>YouTube background</summary>
+                        <pre>{{ youtube_background_status | tojson(indent=2) }}</pre>
+                    </details>
+                </section>
+            </aside>
+
+            <main class="stack">
+                <section class="panel">
+                    <h2>Projeto Atual</h2>
+                    {% if current_project %}
+                        <p class="subtle">
+                            <strong>{{ current_project.name }}</strong> · {{ current_project.project_id }} · {{ current_project.project_type }}
+                        </p>
+                        {% if current_project.description %}
+                            <p class="meta">{{ current_project.description }}</p>
+                        {% endif %}
+                        {% for tag in current_project.tags or [] %}
+                            <span class="pill">{{ tag }}</span>
+                        {% endfor %}
+                    {% else %}
+                        <div class="empty">Selecione ou crie um projeto para liberar as acoes do pipeline.</div>
+                    {% endif %}
+                </section>
+
+                <div class="section-grid">
+                    <section class="panel">
+                        <h3>Referencia Local</h3>
+                        <form method="post" enctype="multipart/form-data">
+                            <input type="hidden" name="action" value="upload_reference">
+                            <input type="hidden" name="current_project_id" value="{{ current_project_id or '' }}">
+                            <div>
+                                <label>Arquivo de audio</label>
+                                <input type="file" name="reference_file" accept=".wav,.mp3,.flac,.ogg,.m4a,.aac">
+                            </div>
+                            <div class="field-grid">
+                                <div>
+                                    <label>Papel</label>
+                                    <select name="reference_role">
+                                        {% for value, label in reference_roles %}
+                                            <option value="{{ value }}">{{ label }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label>Legenda</label>
+                                    <input type="text" name="reference_caption" value="{{ form_state.get('reference_caption', '') }}" placeholder="Soul sample 01">
+                                </div>
+                            </div>
+                            <div class="field-grid">
+                                <div>
+                                    <label>Tags CSV</label>
+                                    <input type="text" name="reference_tags" value="{{ form_state.get('reference_tags', '') }}" placeholder="soul, dusty, warm">
+                                </div>
+                                <div>
+                                    <label>Label da analise</label>
+                                    <input type="text" name="reference_analysis_label" value="{{ form_state.get('reference_analysis_label', '') }}" placeholder="analise da referencia">
+                                </div>
+                            </div>
+                            <div class="checkbox-row">
+                                <input type="checkbox" id="create_reference_analysis" name="create_reference_analysis" checked>
+                                <label for="create_reference_analysis">Rodar analise assim que o upload entrar</label>
+                            </div>
+                            <div class="actions">
+                                <button class="btn" type="submit">Adicionar referencia</button>
+                            </div>
+                        </form>
+                    </section>
+
+                    <section class="panel">
+                        <h3>Link Externo</h3>
+                        <form method="post">
+                            <input type="hidden" name="action" value="register_link">
+                            <input type="hidden" name="current_project_id" value="{{ current_project_id or '' }}">
+                            <div>
+                                <label>URL</label>
+                                <input type="text" name="source_url" value="{{ form_state.get('source_url', '') }}" placeholder="https://www.youtube.com/watch?v=...">
+                            </div>
+                            <div class="field-grid">
+                                <div>
+                                    <label>Papel</label>
+                                    <select name="link_role">
+                                        {% for value, label in reference_roles %}
+                                            <option value="{{ value }}">{{ label }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label>Legenda</label>
+                                    <input type="text" name="link_caption" value="{{ form_state.get('link_caption', '') }}" placeholder="Referencia externa">
+                                </div>
+                            </div>
+                            <div class="field-grid">
+                                <div>
+                                    <label>Tags CSV</label>
+                                    <input type="text" name="link_tags" value="{{ form_state.get('link_tags', '') }}" placeholder="youtube, sample, hook">
+                                </div>
+                                <div>
+                                    <label>Context label</label>
+                                    <input type="text" name="context_label" value="{{ form_state.get('context_label', '') }}" placeholder="metadata externa">
+                                </div>
+                            </div>
+                            <div>
+                                <label>Metadata JSON opcional</label>
+                                <textarea name="imported_metadata_json" placeholder='{"title": "Track", "artist": "Artist", "duration_seconds": 213.4}'>{{ form_state.get('imported_metadata_json', '') }}</textarea>
+                            </div>
+                            <div class="checkbox-row">
+                                <input type="checkbox" id="create_link_context" name="create_link_context" checked>
+                                <label for="create_link_context">Criar derived context quando houver metadata</label>
+                            </div>
+                            <div class="actions">
+                                <button class="btn" type="submit">Registrar link</button>
+                            </div>
+                        </form>
+                    </section>
+                </div>
+
+                <section class="panel">
+                    <h3>Captura Assistida</h3>
+                    <p class="subtle">Fluxo para promover uma referencia sonora real via loopback, opcionalmente gerando analise, working set e blueprint no final.</p>
+                    <form method="post">
+                        <input type="hidden" name="action" value="capture_loopback">
+                        <input type="hidden" name="current_project_id" value="{{ current_project_id or '' }}">
+                        <div class="field-grid">
+                            <div>
+                                <label>URL de origem</label>
+                                <input type="text" name="capture_source_url" value="{{ form_state.get('capture_source_url', '') }}" placeholder="https://...">
+                            </div>
+                            <div>
+                                <label>Label</label>
+                                <input type="text" name="capture_label" value="{{ form_state.get('capture_label', '') }}" placeholder="capture soul sample">
+                            </div>
+                            <div>
+                                <label>Modo</label>
+                                <select name="capture_source_mode">
+                                    {% for value, label in capture_source_modes %}
+                                        <option value="{{ value }}">{{ label }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div>
+                                <label>Duracao (s)</label>
+                                <input type="number" step="0.1" name="capture_duration_seconds" value="{{ form_state.get('capture_duration_seconds', '30') }}">
+                            </div>
+                        </div>
+                        <div class="field-grid">
+                            <div>
+                                <label>Loopback device</label>
+                                <select name="capture_device_name">
+                                    <option value="">Default / auto</option>
+                                    {% for device in loopback_devices.get('devices', []) %}
+                                        <option value="{{ device.name }}">{{ device.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div>
+                                <label>Playback device</label>
+                                <select name="capture_playback_device_name">
+                                    <option value="">Auto / nao forcar</option>
+                                    {% for device in routing_devices.get('speakers', []) %}
+                                        <option value="{{ device.name }}">{{ device.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div>
+                                <label>Role</label>
+                                <select name="capture_role">
+                                    {% for value, label in reference_roles %}
+                                        <option value="{{ value }}">{{ label }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div>
+                                <label>Modo do audio promovido</label>
+                                <select name="capture_reference_audio_mode">
+                                    {% for value, label in reference_audio_modes %}
+                                        <option value="{{ value }}">{{ label }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="field-grid">
+                            <div>
+                                <label>Target BPM opcional</label>
+                                <input type="number" step="0.1" name="capture_target_bpm" value="{{ form_state.get('capture_target_bpm', '') }}">
+                            </div>
+                            <div>
+                                <label>Bars blueprint</label>
+                                <input type="number" name="capture_bars" value="{{ form_state.get('capture_bars', '16') }}">
+                            </div>
+                            <div>
+                                <label>Steps / bar</label>
+                                <input type="number" name="capture_steps_per_bar" value="{{ form_state.get('capture_steps_per_bar', '16') }}">
+                            </div>
+                            <div>
+                                <label>Style tags CSV</label>
+                                <input type="text" name="capture_style_tags" value="{{ form_state.get('capture_style_tags', '') }}" placeholder="boom bap, warm">
+                            </div>
+                        </div>
+                        <div>
+                            <label>Style prompt</label>
+                            <textarea name="capture_style_prompt" placeholder="Descreva o tipo de beat a partir da referencia.">{{ form_state.get('capture_style_prompt', '') }}</textarea>
+                        </div>
+                        <div class="field-grid">
+                            <div class="choice"><input type="checkbox" name="capture_create_analysis" checked> Criar analise</div>
+                            <div class="choice"><input type="checkbox" name="capture_create_blueprint" checked> Criar blueprint</div>
+                            <div class="choice"><input type="checkbox" name="capture_create_working_set" checked> Criar working set</div>
+                            <div class="choice"><input type="checkbox" name="capture_create_separation"> Criar separacao</div>
+                            <div class="choice"><input type="checkbox" name="capture_keep_capture"> Manter WAV temporario</div>
+                            <div class="choice"><input type="checkbox" name="capture_cleanup_after_flow" checked> Limpar temporarios ao fim</div>
+                        </div>
+                        <div class="actions">
+                            <button class="btn" type="submit">Iniciar captura</button>
+                        </div>
+                    </form>
+                </section>
+
+                <div class="section-grid">
+                    <section class="panel">
+                        <h3>Beat Blueprint</h3>
+                        <form method="post">
+                            <input type="hidden" name="action" value="create_blueprint">
+                            <input type="hidden" name="current_project_id" value="{{ current_project_id or '' }}">
+                            <div>
+                                <label>Label</label>
+                                <input type="text" name="blueprint_label" value="{{ form_state.get('blueprint_label', '') }}" placeholder="boom-bap-reference-blueprint">
+                            </div>
+                            <div class="field-grid">
+                                <div>
+                                    <label>Target BPM opcional</label>
+                                    <input type="number" step="0.1" name="blueprint_target_bpm" value="{{ form_state.get('blueprint_target_bpm', '') }}">
+                                </div>
+                                <div>
+                                    <label>Bars</label>
+                                    <input type="number" name="blueprint_bars" value="{{ form_state.get('blueprint_bars', '16') }}">
+                                </div>
+                                <div>
+                                    <label>Steps / bar</label>
+                                    <input type="number" name="blueprint_steps_per_bar" value="{{ form_state.get('blueprint_steps_per_bar', '16') }}">
+                                </div>
+                            </div>
+                            <div>
+                                <label>Style tags CSV</label>
+                                <input type="text" name="blueprint_style_tags" value="{{ form_state.get('blueprint_style_tags', '') }}" placeholder="dusty, looped, soulful">
+                            </div>
+                            <div>
+                                <label>Style prompt</label>
+                                <textarea name="blueprint_style_prompt" placeholder="Descreva a direcao musical desejada.">{{ form_state.get('blueprint_style_prompt', '') }}</textarea>
+                            </div>
+                            <label>Referencias com audio local</label>
+                            <div class="inline-choices">
+                                {% set references = ((current_bundle or {}).get('manifests', {}).get('references', {}) or {}).get('items', []) %}
+                                {% for item in references %}
+                                    {% if item.relative_path %}
+                                        <label class="choice">
+                                            <input type="checkbox" name="blueprint_reference_ids" value="{{ item.reference_id }}">
+                                            <strong>{{ item.caption or item.reference_id }}</strong>
+                                            <span class="meta">· {{ item.role }} · {{ item.source_type }}</span>
+                                        </label>
+                                    {% endif %}
+                                {% endfor %}
+                                {% if not references %}
+                                    <div class="empty">Adicione referencias primeiro para gerar um blueprint.</div>
+                                {% endif %}
+                            </div>
+                            <div class="actions">
+                                <button class="btn" type="submit">Criar blueprint</button>
+                            </div>
+                        </form>
+                    </section>
+
+                    <section class="panel">
+                        <h3>Blueprint Ativo + Render</h3>
+                        <form method="post">
+                            <input type="hidden" name="action" value="set_active_blueprint">
+                            <input type="hidden" name="current_project_id" value="{{ current_project_id or '' }}">
+                            <label>Blueprint ativo</label>
+                            <select name="blueprint_version_id">
+                                <option value="">Selecione</option>
+                                {% for item in ((current_bundle or {}).get('manifests', {}).get('beat_blueprints', {}) or {}).get('items', []) %}
+                                    <option value="{{ item.version_id }}" {% if ((current_bundle or {}).get('active_beat_blueprint') or {}).get('version_id') == item.version_id %}selected{% endif %}>
+                                        {{ item.label }} · {{ item.version_id }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                            <div class="actions">
+                                <button class="btn-secondary" type="submit">Ativar blueprint</button>
+                            </div>
+                        </form>
+                        <form method="post" style="margin-top: 14px;">
+                            <input type="hidden" name="action" value="render_blueprint">
+                            <input type="hidden" name="current_project_id" value="{{ current_project_id or '' }}">
+                            <div class="field-grid">
+                                <div>
+                                    <label>Blueprint opcional</label>
+                                    <select name="render_blueprint_version_id">
+                                        <option value="">Usar ativo</option>
+                                        {% for item in ((current_bundle or {}).get('manifests', {}).get('beat_blueprints', {}) or {}).get('items', []) %}
+                                            <option value="{{ item.version_id }}">{{ item.label }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label>Label</label>
+                                    <input type="text" name="render_label" value="{{ form_state.get('render_label', '') }}" placeholder="phase7-render-webapp">
+                                </div>
+                            </div>
+                            <div class="field-grid">
+                                <div>
+                                    <label>Duracao alvo (s)</label>
+                                    <input type="number" step="0.1" name="render_target_duration_seconds" value="{{ form_state.get('render_target_duration_seconds', '') }}">
+                                </div>
+                                <div>
+                                    <label>Bars override</label>
+                                    <input type="number" name="render_bars_override" value="{{ form_state.get('render_bars_override', '') }}">
+                                </div>
+                                <div>
+                                    <label>Steps override</label>
+                                    <input type="number" name="render_steps_override" value="{{ form_state.get('render_steps_override', '') }}">
+                                </div>
+                            </div>
+                            <div class="field-grid">
+                                <div>
+                                    <label>Creativity</label>
+                                    <input type="number" step="0.01" name="render_creativity" value="{{ form_state.get('render_creativity', '0.35') }}">
+                                </div>
+                                <div>
+                                    <label>Fill probability</label>
+                                    <input type="number" step="0.01" name="render_fill_probability" value="{{ form_state.get('render_fill_probability', '0.28') }}">
+                                </div>
+                            </div>
+                            <div class="checkbox-row">
+                                <input type="checkbox" id="render_create_master" name="render_create_master">
+                                <label for="render_create_master">Criar master final</label>
+                            </div>
+                            <div class="actions">
+                                <button class="btn" type="submit">Renderizar beat</button>
+                            </div>
+                        </form>
+                    </section>
+                </div>
+
+                <section class="panel">
+                    <h3>Vocal-Fit</h3>
+                    <form method="post" enctype="multipart/form-data">
+                        <input type="hidden" name="action" value="vocal_fit">
+                        <input type="hidden" name="current_project_id" value="{{ current_project_id or '' }}">
+                        <div class="field-grid">
+                            <div>
+                                <label>Instrumental recente</label>
+                                <select name="vocal_fit_instrumental_candidate">
+                                    <option value="">Selecione um candidato</option>
+                                    {% for item in project_audio_candidates %}
+                                        <option value="{{ item.path }}">{{ item.group }} · {{ item.label }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div>
+                                <label>Caminho manual do instrumental</label>
+                                <input type="text" name="vocal_fit_instrumental_audio_path" value="{{ form_state.get('vocal_fit_instrumental_audio_path', '') }}" placeholder="artifacts/audio_gen/.../mix.wav">
+                            </div>
+                        </div>
+                        <div class="field-grid">
+                            <div>
+                                <label>Arquivo vocal</label>
+                                <input type="file" name="vocal_fit_vocal_file" accept=".wav,.mp3,.flac,.ogg,.m4a,.aac">
+                            </div>
+                            <div>
+                                <label>Legenda do vocal</label>
+                                <input type="text" name="vocal_fit_vocal_caption" value="{{ form_state.get('vocal_fit_vocal_caption', '') }}" placeholder="lead vocal take">
+                            </div>
+                        </div>
+                        <div class="field-grid">
+                            <div>
+                                <label>Label</label>
+                                <input type="text" name="vocal_fit_label" value="{{ form_state.get('vocal_fit_label', '') }}" placeholder="vocal-fit-webapp">
+                            </div>
+                            <div>
+                                <label>Profile</label>
+                                <select name="vocal_fit_profile">
+                                    {% for value, label in instrumental_adaptation_profiles %}
+                                        <option value="{{ value }}">{{ label }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div>
+                                <label>Ducking strength</label>
+                                <input type="number" step="0.01" name="vocal_fit_ducking_strength" value="{{ form_state.get('vocal_fit_ducking_strength', '0.32') }}">
+                            </div>
+                        </div>
+                        <div>
+                            <label>Tags do vocal CSV</label>
+                            <input type="text" name="vocal_fit_vocal_tags" value="{{ form_state.get('vocal_fit_vocal_tags', '') }}" placeholder="lead, rap, dry">
+                        </div>
+                        <div class="checkbox-row">
+                            <input type="checkbox" id="vocal_fit_create_master" name="vocal_fit_create_master">
+                            <label for="vocal_fit_create_master">Criar master do vocal-fit</label>
+                        </div>
+                        <div class="actions">
+                            <button class="btn" type="submit">Rodar vocal-fit</button>
+                        </div>
+                    </form>
+                </section>
+
+                <div class="section-grid">
+                    <section class="panel">
+                        <h3>Referencias</h3>
+                        {% set references = ((current_bundle or {}).get('manifests', {}).get('references', {}) or {}).get('items', []) %}
+                        {% if references %}
+                            <div class="scroll-list">
+                                {% for item in references[:20] %}
+                                    <div class="item">
+                                        <h4>{{ item.caption or item.reference_id }}</h4>
+                                        <div class="meta">{{ item.reference_id }} · {{ item.role }} · {{ item.source_type }}</div>
+                                        {% if item.source_url %}
+                                            <div class="meta">{{ item.source_url }}</div>
+                                        {% endif %}
+                                        {% if item.resolved_file_url %}
+                                            <div class="meta"><a href="{{ item.resolved_file_url }}" target="_blank">abrir arquivo associado</a></div>
+                                        {% endif %}
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <div class="empty">Nenhuma referencia registrada ainda.</div>
+                        {% endif %}
+                    </section>
+
+                    <section class="panel">
+                        <h3>Working Sets + Blueprints</h3>
+                        <form method="post">
+                            <input type="hidden" name="action" value="set_active_working_set">
+                            <input type="hidden" name="current_project_id" value="{{ current_project_id or '' }}">
+                            <label>Working set ativo</label>
+                            <select name="working_set_id">
+                                <option value="">Selecione</option>
+                                {% for item in ((current_bundle or {}).get('manifests', {}).get('working_sets', {}) or {}).get('items', []) %}
+                                    <option value="{{ item.working_set_id }}" {% if ((current_bundle or {}).get('active_working_set') or {}).get('working_set_id') == item.working_set_id %}selected{% endif %}>
+                                        {{ item.label }} · {{ item.working_set_id }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                            <div class="actions">
+                                <button class="btn-secondary" type="submit">Ativar working set</button>
+                            </div>
+                        </form>
+                        <div class="scroll-list" style="margin-top: 12px;">
+                            {% for item in ((current_bundle or {}).get('manifests', {}).get('beat_blueprints', {}) or {}).get('items', [])[:12] %}
+                                <div class="item">
+                                    <h4>{{ item.label }}</h4>
+                                    <div class="meta">{{ item.version_id }} · {{ item.bars }} bars · {{ item.steps_per_bar }} steps</div>
+                                    {% for tag in item.style_tags or [] %}
+                                        <span class="pill">{{ tag }}</span>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                <div class="empty">Nenhum blueprint persistido ainda.</div>
+                            {% endfor %}
+                        </div>
+                    </section>
+                </div>
+
+                <section class="panel">
+                    <h3>Audios do Projeto</h3>
+                    {% if project_audio_candidates %}
+                        {% for item in project_audio_candidates %}
+                            <div class="audio-candidate">
+                                <div>
+                                    <strong>{{ item.label }}</strong><br>
+                                    <span class="meta">{{ item.group }}</span>
+                                </div>
+                                {% if item.url %}
+                                    <a href="{{ item.url }}" target="_blank">abrir</a>
+                                {% endif %}
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="empty">Ainda nao ha candidatos de audio reunidos para este projeto.</div>
+                    {% endif %}
+                </section>
+
+                {% if action_result %}
+                    <section class="panel">
+                        <h3>Resultado da Ultima Acao</h3>
+                        {% if action_result_paths %}
+                            <div class="result-grid">
+                                {% for item in action_result_paths %}
+                                    <div class="item">
+                                        <h4>{{ item.name }}</h4>
+                                        <div class="meta">{{ item.path }}</div>
+                                        {% if item.url %}
+                                            <div class="meta"><a href="{{ item.url }}" target="_blank">abrir arquivo</a></div>
+                                        {% endif %}
+                                        {% if item.is_audio and item.url %}
+                                            <audio controls preload="none">
+                                                <source src="{{ item.url }}">
+                                            </audio>
+                                        {% endif %}
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        {% if action_result_json %}
+                            <details open>
+                                <summary>Payload completo</summary>
+                                <pre>{{ action_result_json }}</pre>
+                            </details>
+                        {% endif %}
+                    </section>
+                {% endif %}
+            </main>
+        </div>
+    </div>
+</body>
+</html>

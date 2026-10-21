@@ -197,6 +197,37 @@ Notes:
 - The render now also applies an internal `motif_sample_glue_v1` pass, lightly ducking and widening
   `texture`, `chops`, and `resample-motif` around the active melodic motif so those layers feel
   stacked together instead of competing in the same space.
+- After that glue stage, the beat renderer now also applies `motif_topline_signature_v1`, giving
+  the melodic top-end a clearer hierarchy: `hook` chops get more bite and width in hook moments,
+  `resample-motif` gains a more intentional harmonic lift, `texture` gets cleaner air support, and
+  the lead melody tucks a bit of upper-mid pressure so the stack feels more sample-led and less
+  like parallel correct layers.
+- The renderer now also adds `motif_tonal_memory_bus_v1`, a subtle section-aware parallel tonal bed
+  derived from `melody`, `hook` chops, `resample-motif`, and `texture`, reinforcing hook memory
+  and emotional signature without exposing new controls in the webapp.
+- The beat render now also applies `boombap_ensemble_section_contrast_v1`, a collective section
+  contrast pass that makes drums, bass, and the sample stack respond together across `verse`,
+  `pre_hook`, `hook`, `break`, and `outro` so the arrangement feels less like a rich continuous
+  loop and more like a produced song with section intent.
+- The renderer now also applies `boombap_hook_memory_lift_v1`, reinforcing recurring hook pulses
+  across `melody`, `hook` chops, `resample`, `tonal glue`, and a subtle `hook-memory-bus` so the
+  refrain is easier to remember and feels more like a deliberate chorus than just a louder section.
+- The drum stage now also applies `boombap_drum_turnarounds_v1`, generating short section-boundary
+  fill accents and a parallel `drum-turnaround-bus` before key entries like `pre_hook`, `hook`,
+  `break`, and returning verse moments so the beat feels more hand-produced.
+- The renderer now also applies `boombap_drum_section_evolution_v1`, varying hat/perc/snare/clap/
+  kick behavior inside the same section and adding a subtle `drum-evolution-bus` so verses and
+  hooks keep moving even before the next section boundary arrives.
+- The drum stack now also applies `boombap_drum_kit_character_v1`, reshaping the color of kick,
+  snare, clap, hats, percussion, and drum bed by section and adding a `drum-kit-character-bus` so
+  `verse`, `pre_hook`, `hook`, and `break` feel like the same kit pushed in different directions.
+- The renderer now also applies `boombap_sample_stack_groove_response_v1`, making `melody`,
+  `chops`, `texture`, `resample`, and tonal support react more clearly to kick/backbeat motion and
+  adding a `sample-groove-response-bus` so the sample stack breathes with the drums instead of
+  sitting on top of them.
+- The sample stack now also applies `boombap_sample_stack_section_dialogue_v1`, shaping a clearer
+  internal call/answer relationship between `verse`, `pre_hook`, and `hook` and adding a
+  `sample-section-dialogue-bus` so the musical layers feel more conversational across sections.
 - The multi-bank chop path now reuses a cached base candidate ranking per reference/variant window,
   reducing render time for the richer boom-bap stack without changing the musical choices.
 - `fit_vocal_to_beat(...)` now handles the first `vocal-fit` workflow for user-provided vocal files:

@@ -308,6 +308,7 @@ def _load_audio_array(
 
 _REFERENCE_AUDIO_CACHE: Dict[tuple[str, int, int], tuple["np.ndarray", int]] = {}
 _REFERENCE_CHOP_CANDIDATE_CACHE: Dict[tuple[Any, ...], List[tuple[float, int, Dict[str, float]]]] = {}
+_SECTION_MIX_PROFILE_CACHE: Dict[tuple[Any, ...], Dict[str, Any]] = {}
 
 
 def _load_reference_audio_array(
@@ -368,6 +369,224 @@ def _rank_reference_chop_candidates(
     ranked_candidates.sort(key=lambda item: item[0], reverse=True)
     _REFERENCE_CHOP_CANDIDATE_CACHE[cache_key] = [(float(score), int(start), dict(components)) for score, start, components in ranked_candidates]
     return [(float(score), int(start), dict(components)) for score, start, components in ranked_candidates]
+
+
+def _select_representative_sample_layers(
+    role_by_name: Dict[str, str],
+    available_layers: Iterable[str],
+) -> List[str]:
+    selected: List[str] = []
+    seen: Set[str] = set()
+    available = [name for name in available_layers if name in role_by_name]
+    if not available:
+        return selected
+
+    def _add(name: str) -> None:
+        if name and name not in seen:
+            selected.append(name)
+            seen.add(name)
+
+    priority_exact = [
+        "melody",
+        "texture",
+        "chop",
+        "chop-hook",
+        "chop-phrase",
+        "resample-motif",
+        "tonal-glue",
+        "hook-memory-bus",
+        "sample-groove-response-bus",
+    ]
+    for priority_name in priority_exact:
+        for layer_name in available:
+            if _clean_text(layer_name).lower() == priority_name:
+                _add(layer_name)
+
+    chop_candidates = [name for name in available if role_by_name.get(name) == "chop" and name not in seen]
+    for keyword in ("hook", "phrase", "answer", "transition", "alt"):
+        for layer_name in chop_candidates:
+            if keyword in _clean_text(layer_name).lower():
+                _add(layer_name)
+                break
+
+    role_limits = {
+        "melody": 1,
+        "lead": 1,
+        "texture": 1,
+        "resample": 1,
+        "tonal_glue": 1,
+        "hook_memory": 1,
+        "sample_groove": 1,
+        "chop": 3,
+    }
+    counts: Dict[str, int] = {}
+    filtered: List[str] = []
+    for layer_name in selected + available:
+        role_name = role_by_name.get(layer_name, "")
+        limit = int(role_limits.get(role_name, 1))
+        current = int(counts.get(role_name, 0))
+        if current >= limit:
+            continue
+        if layer_name in filtered:
+            continue
+        filtered.append(layer_name)
+        counts[role_name] = current + 1
+    return filtered
+
+
+def _select_sample_stack_focus_layers(
+    role_by_name: Dict[str, str],
+    available_layers: Iterable[str],
+    include_response_bus: bool = False,
+    max_layers: Optional[int] = None,
+) -> List[str]:
+    available = [name for name in available_layers if name in role_by_name]
+    if not available:
+        return []
+    resolved_max_layers = max(1, int(max_layers or (5 if include_response_bus else 4)))
+
+    selected: List[str] = []
+    seen: Set[str] = set()
+
+    def _add_first(predicate: Any) -> None:
+        if len(selected) >= resolved_max_layers:
+            return
+        for layer_name in available:
+            if layer_name in seen:
+                continue
+            if predicate(layer_name):
+                selected.append(layer_name)
+                seen.add(layer_name)
+                return
+
+    _add_first(lambda name: role_by_name.get(name) in {"melody", "lead"})
+    _add_first(lambda name: role_by_name.get(name) == "chop" and "hook" in _clean_text(name).lower())
+    _add_first(lambda name: role_by_name.get(name) == "chop")
+    _add_first(lambda name: role_by_name.get(name) == "texture")
+    _add_first(lambda name: role_by_name.get(name) == "resample")
+    _add_first(lambda name: role_by_name.get(name) == "tonal_glue")
+    if include_response_bus:
+        _add_first(lambda name: role_by_name.get(name) == "sample_groove")
+
+    for layer_name in available:
+        if len(selected) >= resolved_max_layers:
+            break
+        if layer_name in seen:
+            continue
+        selected.append(layer_name)
+        seen.add(layer_name)
+    return selected
+
+
+def _select_representative_drum_layers(
+    role_by_name: Dict[str, str],
+    available_layers: Iterable[str],
+) -> List[str]:
+    selected: List[str] = []
+    seen: Set[str] = set()
+    available = [name for name in available_layers if name in role_by_name]
+    if not available:
+        return selected
+
+    def _add(name: str) -> None:
+        if name and name not in seen:
+            selected.append(name)
+            seen.add(name)
+
+    priority_exact = [
+        "kick",
+        "snare",
+        "clap",
+        "hat",
+        "perc",
+        "drum-bed",
+        "drum-fill",
+        "drum-variation",
+    ]
+    for priority_name in priority_exact:
+        for layer_name in available:
+            if _clean_text(layer_name).lower() == priority_name:
+                _add(layer_name)
+
+    role_limits = {
+        "kick": 1,
+        "snare": 1,
+        "clap": 1,
+        "hat": 1,
+        "hihat": 1,
+        "perc": 1,
+        "drum_bed": 1,
+        "drum_fill": 1,
+        "drum_variation": 1,
+    }
+    counts: Dict[str, int] = {}
+    filtered: List[str] = []
+    for layer_name in selected + available:
+        role_name = role_by_name.get(layer_name, "")
+        limit = int(role_limits.get(role_name, 1))
+        current = int(counts.get(role_name, 0))
+        if current >= limit:
+            continue
+        if layer_name in filtered:
+            continue
+        filtered.append(layer_name)
+        counts[role_name] = current + 1
+    return filtered
+
+
+def _select_drum_character_layers(
+    role_by_name: Dict[str, str],
+    available_layers: Iterable[str],
+) -> List[str]:
+    available = [name for name in available_layers if name in role_by_name]
+    if not available:
+        return []
+
+    selected: List[str] = []
+    seen: Set[str] = set()
+
+    def _add_first(predicate: Any) -> None:
+        for layer_name in available:
+            if layer_name in seen:
+                continue
+            if predicate(layer_name):
+                selected.append(layer_name)
+                seen.add(layer_name)
+                return
+
+    _add_first(lambda name: role_by_name.get(name) == "kick")
+    _add_first(lambda name: role_by_name.get(name) == "snare")
+    _add_first(lambda name: role_by_name.get(name) == "clap")
+    _add_first(lambda name: role_by_name.get(name) in {"hat", "hihat"})
+    _add_first(lambda name: role_by_name.get(name) == "drum_variation")
+    _add_first(lambda name: role_by_name.get(name) == "perc")
+    _add_first(lambda name: role_by_name.get(name) == "drum_fill")
+    _add_first(lambda name: role_by_name.get(name) == "drum_bed")
+
+    prioritized: List[str] = []
+    prioritized_seen: Set[str] = set()
+    for layer_name in selected:
+        role_name = role_by_name.get(layer_name, "")
+        if role_name == "clap" and any(role_by_name.get(existing) == "snare" for existing in prioritized):
+            continue
+        if role_name == "drum_fill" and any(role_by_name.get(existing) == "drum_variation" for existing in prioritized):
+            continue
+        if role_name == "perc" and any(role_by_name.get(existing) == "drum_variation" for existing in prioritized):
+            continue
+        if layer_name not in prioritized_seen:
+            prioritized.append(layer_name)
+            prioritized_seen.add(layer_name)
+        if len(prioritized) >= 4:
+            break
+
+    for layer_name in available:
+        if len(prioritized) >= 4:
+            break
+        if layer_name in prioritized_seen:
+            continue
+        prioritized.append(layer_name)
+        prioritized_seen.add(layer_name)
+    return prioritized
 
 
 def _write_audio_array_to_wav(
@@ -10173,13 +10392,21 @@ def _apply_pattern_drum_bus_glue(
     if np is None or not layer_renders:
         return None
 
-    drum_roles = {"kick", "snare", "clap", "hat", "hihat", "perc", "drum_bed"}
-    drum_layer_names: List[str] = []
-    for layer_manifest in rendered_layers:
-        role_name = _clean_text(layer_manifest.get("role")).lower()
-        layer_name = _clean_text(layer_manifest.get("name"))
-        if role_name in drum_roles and layer_name and layer_name in layer_renders:
-            drum_layer_names.append(layer_name)
+    role_by_name = {
+        _clean_text(layer.get("name")): _clean_text(layer.get("role")).lower()
+        for layer in rendered_layers
+        if _clean_text(layer.get("name"))
+    }
+    core_drum_layers = _select_drum_character_layers(
+        role_by_name=role_by_name,
+        available_layers=[name for name, role in role_by_name.items() if role in {"kick", "snare", "clap", "hat", "hihat", "perc", "drum_bed"} and name in layer_renders],
+    )
+    drum_layer_names: List[str] = list(core_drum_layers)
+    for preferred_role in ("drum_variation", "drum_character", "drum_fill"):
+        for layer_name, role_name in role_by_name.items():
+            if role_name == preferred_role and layer_name in layer_renders and layer_name not in drum_layer_names:
+                drum_layer_names.append(layer_name)
+                break
     if len(drum_layer_names) < 2:
         return None
 
@@ -10194,15 +10421,17 @@ def _apply_pattern_drum_bus_glue(
     bus = dry_bus.copy()
     if signal is not None and bus.shape[0] > 2048:
         try:
-            low_b, low_a = signal.butter(2, [55.0 / (sample_rate * 0.5), 155.0 / (sample_rate * 0.5)], btype="bandpass")
-            body_b, body_a = signal.butter(2, [180.0 / (sample_rate * 0.5), 950.0 / (sample_rate * 0.5)], btype="bandpass")
-            snap_b, snap_a = signal.butter(2, [1200.0 / (sample_rate * 0.5), 5200.0 / (sample_rate * 0.5)], btype="bandpass")
+            low_sos = signal.butter(2, [55.0, 155.0], btype="bandpass", fs=sample_rate, output="sos")
+            body_sos = signal.butter(2, [180.0, 950.0], btype="bandpass", fs=sample_rate, output="sos")
+            snap_sos = signal.butter(2, [1200.0, 5200.0], btype="bandpass", fs=sample_rate, output="sos")
             shaped = np.zeros_like(bus)
-            for channel in range(bus.shape[1]):
-                low = signal.filtfilt(low_b, low_a, bus[:, channel]).astype(np.float32)
-                body = signal.filtfilt(body_b, body_a, bus[:, channel]).astype(np.float32)
-                snap = signal.filtfilt(snap_b, snap_a, bus[:, channel]).astype(np.float32)
-                shaped[:, channel] = (low * 0.5) + (body * 0.36) + (snap * 0.14)
+            mono = np.mean(bus, axis=1).astype(np.float32)
+            low = signal.sosfiltfilt(low_sos, mono).astype(np.float32)
+            body = signal.sosfiltfilt(body_sos, mono).astype(np.float32)
+            snap = signal.sosfilt(snap_sos, mono).astype(np.float32)
+            shaped_mono = ((low * 0.5) + (body * 0.36) + (snap * 0.14)).astype(np.float32)
+            shaped[:, 0] = shaped_mono
+            shaped[:, 1] = shaped_mono
             bus = (bus * 0.34) + shaped
         except Exception:
             pass
@@ -10226,11 +10455,13 @@ def _apply_pattern_drum_bus_glue(
     parallel = np.tanh(bus * 1.72).astype(np.float32) * 0.18
     if signal is not None and parallel.shape[0] > 2048:
         try:
-            hp_b, hp_a = signal.butter(2, 32.0 / (sample_rate * 0.5), btype="highpass")
-            lp_b, lp_a = signal.butter(2, 9800.0 / (sample_rate * 0.5), btype="lowpass")
-            for channel in range(parallel.shape[1]):
-                parallel[:, channel] = signal.filtfilt(hp_b, hp_a, parallel[:, channel]).astype(np.float32)
-                parallel[:, channel] = signal.filtfilt(lp_b, lp_a, parallel[:, channel]).astype(np.float32)
+            hp_sos = signal.butter(2, 32.0, btype="highpass", fs=sample_rate, output="sos")
+            lp_sos = signal.butter(2, 9800.0, btype="lowpass", fs=sample_rate, output="sos")
+            mono = np.mean(parallel, axis=1).astype(np.float32)
+            mono = signal.sosfilt(hp_sos, mono).astype(np.float32)
+            mono = signal.sosfilt(lp_sos, mono).astype(np.float32)
+            parallel[:, 0] = mono
+            parallel[:, 1] = mono
         except Exception:
             pass
     parallel = np.clip(parallel, -0.42, 0.42).astype(np.float32)
@@ -10349,6 +10580,1110 @@ def _apply_pattern_motif_sample_glue(
     }
 
 
+def _apply_pattern_topline_signature(
+    layer_renders: Dict[str, "np.ndarray"],
+    rendered_layers: List[Dict[str, Any]],
+    sections: Optional[Iterable[Dict[str, Any]]],
+    sample_rate: int,
+    tempo_bpm: float,
+) -> Optional[Dict[str, Any]]:
+    if np is None or signal is None or not layer_renders:
+        return None
+
+    role_by_name = {
+        _clean_text(layer.get("name")): _clean_text(layer.get("role")).lower()
+        for layer in rendered_layers
+        if _clean_text(layer.get("name"))
+    }
+    candidate_layers = _select_sample_stack_focus_layers(
+        role_by_name=role_by_name,
+        available_layers=[
+            name
+            for name, role in role_by_name.items()
+            if role in {"melody", "lead", "chop", "texture", "resample"} and name in layer_renders
+        ],
+    )
+    lead_layers = [name for name in candidate_layers if role_by_name.get(name) in {"melody", "lead"}][:1]
+    hook_layers = [
+        name
+        for name in candidate_layers
+        if role_by_name.get(name) == "chop" and "hook" in _clean_text(name).lower()
+    ][:1]
+    resample_layers = [name for name in candidate_layers if role_by_name.get(name) == "resample"][:1]
+    texture_layers = [name for name in candidate_layers if role_by_name.get(name) == "texture"][:1]
+    if not lead_layers or not (hook_layers or resample_layers or texture_layers):
+        return None
+
+    source_layers = lead_layers + hook_layers + resample_layers + texture_layers
+    total_samples = max(layer_renders[name].shape[0] for name in source_layers if name in layer_renders)
+    samples_per_bar = max(1, int(round((240.0 / float(max(1.0, tempo_bpm))) * sample_rate)))
+    smoothing_samples = max(96, int(round(sample_rate * 0.028)))
+    nyquist_hz = sample_rate * 0.5
+
+    def _smooth_envelope(values: "np.ndarray") -> "np.ndarray":
+        if values.size <= smoothing_samples:
+            return values.astype(np.float32)
+        kernel = np.hanning(smoothing_samples).astype(np.float32)
+        kernel_sum = float(np.sum(kernel))
+        if kernel_sum <= 0:
+            return values.astype(np.float32)
+        kernel /= kernel_sum
+        return np.convolve(values, kernel, mode="same").astype(np.float32)
+
+    def _layer_envelope(layer_names: List[str]) -> "np.ndarray":
+        envelope = np.zeros(total_samples, dtype=np.float32)
+        for layer_name in layer_names:
+            render = layer_renders.get(layer_name)
+            if render is None or render.size == 0:
+                continue
+            mono = np.mean(np.abs(render), axis=1).astype(np.float32)
+            envelope[: mono.shape[0]] = np.maximum(envelope[: mono.shape[0]], mono)
+        if not np.any(envelope > 0):
+            return envelope
+        envelope = _smooth_envelope(envelope)
+        reference_level = float(np.percentile(envelope, 84)) if np.any(envelope > 0) else 0.0
+        if reference_level <= 1e-6:
+            return np.zeros_like(envelope)
+        return np.clip(envelope / reference_level, 0.0, 1.0).astype(np.float32)
+
+    lead_envelope = _layer_envelope(lead_layers)
+    hook_envelope = _layer_envelope(hook_layers)
+    if not np.any(lead_envelope > 0):
+        return None
+
+    section_focus = np.zeros(total_samples, dtype=np.float32)
+    current_bar = 0
+    section_focus_map = {
+        "intro": 0.22,
+        "verse": 0.36,
+        "pre_hook": 0.72,
+        "hook": 1.0,
+        "break": 0.24,
+        "outro": 0.18,
+    }
+    for section in list(sections or []):
+        section_name = _resolve_pattern_section_mix_key(section)
+        bars = max(1, int((section or {}).get("bars") or 1))
+        start_index = min(total_samples, current_bar * samples_per_bar)
+        end_index = min(total_samples, (current_bar + bars) * samples_per_bar)
+        if end_index > start_index:
+            section_focus[start_index:end_index] = float(section_focus_map.get(section_name, 0.4))
+        current_bar += bars
+    section_focus = _smooth_envelope(section_focus)
+    support_focus = np.maximum(section_focus, np.maximum(lead_envelope * 0.5, hook_envelope * 0.95)).astype(np.float32)
+    support_focus = np.clip(support_focus, 0.0, 1.0).astype(np.float32)
+
+    def _bandpass(low_hz: float, high_hz: float) -> Optional[Any]:
+        low = max(40.0, float(low_hz))
+        high = min(float(high_hz), nyquist_hz * 0.92)
+        if high <= low + 60.0:
+            return None
+        return signal.butter(2, [low, high], btype="bandpass", fs=sample_rate, output="sos")
+
+    lead_body_sos = _bandpass(260.0, 1280.0)
+    lead_presence_sos = _bandpass(1800.0, 4200.0)
+    hook_body_sos = _bandpass(320.0, 1700.0)
+    hook_bite_sos = _bandpass(2100.0, 5200.0)
+    resample_focus_sos = _bandpass(900.0, 3400.0)
+    resample_air_sos = _bandpass(4200.0, 8400.0)
+    texture_mud_sos = _bandpass(220.0, 720.0)
+    texture_air_sos = _bandpass(3200.0, 7800.0)
+
+    events: List[Dict[str, Any]] = []
+    processed_layers = 0
+
+    def _width_process(render: "np.ndarray", width_env: "np.ndarray") -> "np.ndarray":
+        mid = ((render[:, 0] + render[:, 1]) * 0.5).astype(np.float32)
+        side = ((render[:, 0] - render[:, 1]) * 0.5).astype(np.float32)
+        side *= width_env[: side.shape[0]]
+        return np.stack([mid + side, mid - side], axis=1).astype(np.float32)
+
+    def _apply_mono_band_mix(
+        render: "np.ndarray",
+        body_sos: Optional[Any],
+        body_gain: "np.ndarray",
+        presence_sos: Optional[Any] = None,
+        presence_gain: Optional["np.ndarray"] = None,
+    ) -> "np.ndarray":
+        processed = render.copy()
+        mono = np.mean(processed, axis=1).astype(np.float32)
+        adjustment = np.zeros(mono.shape[0], dtype=np.float32)
+        if body_sos is not None:
+            adjustment += signal.sosfiltfilt(body_sos, mono).astype(np.float32) * body_gain[: mono.shape[0]]
+        if presence_sos is not None and presence_gain is not None:
+            adjustment += signal.sosfiltfilt(presence_sos, mono).astype(np.float32) * presence_gain[: mono.shape[0]]
+        processed[:, 0] += adjustment
+        processed[:, 1] += adjustment
+        return processed.astype(np.float32)
+
+    for layer_name in lead_layers:
+        render = layer_renders.get(layer_name)
+        if render is None or render.size == 0 or lead_body_sos is None or lead_presence_sos is None:
+            continue
+        layer_focus = np.clip(np.maximum(section_focus[: render.shape[0]], hook_envelope[: render.shape[0]]), 0.0, 1.0).astype(np.float32)
+        body_lift = 0.012 + (layer_focus * 0.018)
+        presence_tuck = -(0.012 + (hook_envelope[: render.shape[0]] * 0.034))
+        processed = _apply_mono_band_mix(render, lead_body_sos, body_lift, lead_presence_sos, presence_tuck)
+        processed = _width_process(processed, 1.0 - (layer_focus * 0.03))
+        processed *= (0.997 + (section_focus[: processed.shape[0]] * 0.008))[:, np.newaxis]
+        processed = np.tanh(processed * (1.0 + (layer_focus[:, np.newaxis] * 0.035))).astype(np.float32)
+        layer_renders[layer_name] = np.clip(processed, -1.0, 1.0)
+        processed_layers += 1
+        events.append(
+            {
+                "layer_name": layer_name,
+                "role": "lead",
+                "body_lift_max": round(float(np.max(0.018 + (layer_focus * 0.03))), 4),
+                "presence_tuck_max": round(float(np.max(0.012 + (hook_envelope[: layer_focus.shape[0]] * 0.034))), 4),
+                "width_min": round(float(np.min(1.0 - (layer_focus * 0.05))), 4),
+            }
+        )
+
+    for layer_name in hook_layers:
+        render = layer_renders.get(layer_name)
+        if render is None or render.size == 0 or hook_body_sos is None or hook_bite_sos is None:
+            continue
+        layer_focus = np.clip(np.maximum(support_focus[: render.shape[0]], hook_envelope[: render.shape[0]]), 0.0, 1.0).astype(np.float32)
+        processed = _apply_mono_band_mix(
+            render,
+            hook_body_sos,
+            0.014 + (layer_focus * 0.022),
+            hook_bite_sos,
+            0.018 + (layer_focus * 0.036),
+        )
+        processed = _width_process(processed, 1.0 + (layer_focus * 0.14))
+        processed = np.tanh(processed * (1.0 + (layer_focus[:, np.newaxis] * 0.055))).astype(np.float32)
+        layer_renders[layer_name] = np.clip(processed, -1.0, 1.0)
+        processed_layers += 1
+        events.append(
+            {
+                "layer_name": layer_name,
+                "role": "hook_chop",
+                "bite_push_max": round(float(np.max(0.018 + (layer_focus * 0.036))), 4),
+                "width_max": round(float(np.max(1.0 + (layer_focus * 0.14))), 4),
+            }
+        )
+
+    for layer_name in resample_layers:
+        render = layer_renders.get(layer_name)
+        if render is None or render.size == 0 or resample_focus_sos is None or resample_air_sos is None:
+            continue
+        layer_focus = np.clip(np.maximum(support_focus[: render.shape[0]], hook_envelope[: render.shape[0]] * 1.05), 0.0, 1.0).astype(np.float32)
+        processed = _apply_mono_band_mix(
+            render,
+            resample_focus_sos,
+            0.012 + (layer_focus * 0.028),
+            resample_air_sos,
+            0.002 + (layer_focus * 0.008),
+        )
+        processed = _width_process(processed, 1.0 + (layer_focus * 0.12))
+        processed = np.tanh(processed * (1.0 + (layer_focus[:, np.newaxis] * 0.05))).astype(np.float32)
+        layer_renders[layer_name] = np.clip(processed, -1.0, 1.0)
+        processed_layers += 1
+        events.append(
+            {
+                "layer_name": layer_name,
+                "role": "resample",
+                "focus_push_max": round(float(np.max(0.012 + (layer_focus * 0.028))), 4),
+                "width_max": round(float(np.max(1.0 + (layer_focus * 0.16))), 4),
+            }
+        )
+
+    for layer_name in texture_layers:
+        render = layer_renders.get(layer_name)
+        if render is None or render.size == 0 or texture_mud_sos is None or texture_air_sos is None:
+            continue
+        layer_focus = np.clip(np.maximum(section_focus[: render.shape[0]] * 0.85, lead_envelope[: render.shape[0]] * 0.6), 0.0, 1.0).astype(np.float32)
+        processed = _apply_mono_band_mix(
+            render,
+            texture_mud_sos,
+            -(0.03 + (lead_envelope[: render.shape[0]] * 0.02)),
+            texture_air_sos,
+            0.004 + (layer_focus * 0.014),
+        )
+        processed = _width_process(processed, 1.0 + (layer_focus * 0.1))
+        layer_renders[layer_name] = np.clip(processed, -1.0, 1.0)
+        processed_layers += 1
+        events.append(
+            {
+                "layer_name": layer_name,
+                "role": "texture",
+                "mud_tuck_max": round(float(np.max(0.03 + (lead_envelope[: layer_focus.shape[0]] * 0.02))), 4),
+                "air_push_max": round(float(np.max(0.004 + (layer_focus * 0.014))), 4),
+                "width_max": round(float(np.max(1.0 + (layer_focus * 0.1))), 4),
+            }
+        )
+
+    if processed_layers <= 0:
+        return None
+
+    return {
+        "mode": "motif_topline_signature",
+        "profile": "motif_topline_signature_v1",
+        "lead_layers": lead_layers,
+        "hook_layers": hook_layers,
+        "resample_layers": resample_layers,
+        "texture_layers": texture_layers,
+        "candidate_layers": candidate_layers,
+        "processed_layers_count": int(processed_layers),
+        "events": events,
+        "events_count": len(events),
+        "smoothing_samples": int(smoothing_samples),
+    }
+
+
+def _apply_pattern_tonal_memory_bus(
+    layer_renders: Dict[str, "np.ndarray"],
+    rendered_layers: List[Dict[str, Any]],
+    sections: Optional[Iterable[Dict[str, Any]]],
+    sample_rate: int,
+    tempo_bpm: float,
+) -> Optional[Dict[str, Any]]:
+    if np is None or signal is None or not layer_renders:
+        return None
+
+    role_by_name = {
+        _clean_text(layer.get("name")): _clean_text(layer.get("role")).lower()
+        for layer in rendered_layers
+        if _clean_text(layer.get("name"))
+    }
+    candidate_layers = _select_representative_sample_layers(
+        role_by_name=role_by_name,
+        available_layers=[
+            name
+            for name, role in role_by_name.items()
+            if role in {"melody", "lead", "chop", "texture", "resample"} and name in layer_renders
+        ],
+    )
+    lead_layers = [name for name in candidate_layers if role_by_name.get(name) in {"melody", "lead"}][:2]
+    hook_layers = [
+        name
+        for name in candidate_layers
+        if role_by_name.get(name) == "chop" and "hook" in _clean_text(name).lower()
+    ][:2]
+    resample_layers = [name for name in candidate_layers if role_by_name.get(name) == "resample"][:1]
+    texture_layers = [name for name in candidate_layers if role_by_name.get(name) == "texture"][:1]
+    source_layers = lead_layers + hook_layers + resample_layers + texture_layers
+    if len(source_layers) < 2:
+        return None
+
+    total_samples = max(layer_renders[name].shape[0] for name in source_layers)
+    samples_per_bar = max(1, int(round((240.0 / float(max(1.0, tempo_bpm))) * sample_rate)))
+    smoothing_samples = max(128, int(round(sample_rate * 0.035)))
+    nyquist_hz = sample_rate * 0.5
+
+    def _smooth(values: "np.ndarray") -> "np.ndarray":
+        if values.size <= smoothing_samples:
+            return values.astype(np.float32)
+        kernel = np.hanning(smoothing_samples).astype(np.float32)
+        kernel_sum = float(np.sum(kernel))
+        if kernel_sum <= 0:
+            return values.astype(np.float32)
+        kernel /= kernel_sum
+        return np.convolve(values, kernel, mode="same").astype(np.float32)
+
+    def _envelope_for(layer_names: List[str]) -> "np.ndarray":
+        envelope = np.zeros(total_samples, dtype=np.float32)
+        for layer_name in layer_names:
+            render = layer_renders.get(layer_name)
+            if render is None or render.size == 0:
+                continue
+            mono = np.mean(np.abs(render), axis=1).astype(np.float32)
+            envelope[: mono.shape[0]] = np.maximum(envelope[: mono.shape[0]], mono)
+        if not np.any(envelope > 0):
+            return envelope
+        envelope = _smooth(envelope)
+        reference_level = float(np.percentile(envelope, 84)) if np.any(envelope > 0) else 0.0
+        if reference_level <= 1e-6:
+            return np.zeros_like(envelope)
+        return np.clip(envelope / reference_level, 0.0, 1.0).astype(np.float32)
+
+    lead_envelope = _envelope_for(lead_layers)
+    hook_envelope = _envelope_for(hook_layers)
+    resample_envelope = _envelope_for(resample_layers)
+    texture_envelope = _envelope_for(texture_layers)
+    if not np.any(lead_envelope > 0):
+        return None
+
+    section_bloom = np.zeros(total_samples, dtype=np.float32)
+    current_bar = 0
+    section_bloom_map = {
+        "intro": 0.16,
+        "verse": 0.28,
+        "pre_hook": 0.68,
+        "hook": 1.0,
+        "break": 0.24,
+        "outro": 0.12,
+    }
+    for section in list(sections or []):
+        section_name = _resolve_pattern_section_mix_key(section)
+        bars = max(1, int((section or {}).get("bars") or 1))
+        start_index = min(total_samples, current_bar * samples_per_bar)
+        end_index = min(total_samples, (current_bar + bars) * samples_per_bar)
+        if end_index > start_index:
+            section_bloom[start_index:end_index] = float(section_bloom_map.get(section_name, 0.34))
+        current_bar += bars
+    section_bloom = _smooth(section_bloom)
+
+    bus = np.zeros((total_samples, 2), dtype=np.float32)
+    role_gain_map = {
+        "lead": 0.3,
+        "hook": 0.36,
+        "resample": 0.26,
+        "texture": 0.16,
+    }
+
+    for layer_name in lead_layers:
+        render = layer_renders.get(layer_name)
+        if render is not None and render.size:
+            bus[: render.shape[0]] += render * role_gain_map["lead"]
+    for layer_name in hook_layers:
+        render = layer_renders.get(layer_name)
+        if render is not None and render.size:
+            bus[: render.shape[0]] += render * role_gain_map["hook"]
+    for layer_name in resample_layers:
+        render = layer_renders.get(layer_name)
+        if render is not None and render.size:
+            bus[: render.shape[0]] += render * role_gain_map["resample"]
+    for layer_name in texture_layers:
+        render = layer_renders.get(layer_name)
+        if render is not None and render.size:
+            bus[: render.shape[0]] += render * role_gain_map["texture"]
+
+    if not np.any(np.abs(bus) > 1e-7):
+        return None
+
+    def _bandpass(low_hz: float, high_hz: float) -> Optional[Any]:
+        low = max(45.0, float(low_hz))
+        high = min(float(high_hz), nyquist_hz * 0.92)
+        if high <= low + 60.0:
+            return None
+        return signal.butter(2, [low, high], btype="bandpass", fs=sample_rate, output="sos")
+
+    body_sos = _bandpass(240.0, 1680.0)
+    presence_sos = _bandpass(1700.0, 5200.0)
+    air_sos = _bandpass(4600.0, 9200.0)
+    if body_sos is None or presence_sos is None or air_sos is None:
+        return None
+
+    focus_envelope = np.maximum(
+        section_bloom,
+        np.maximum(hook_envelope * 1.05, np.maximum(resample_envelope * 0.82, lead_envelope * 0.42)),
+    ).astype(np.float32)
+    focus_envelope = np.clip(focus_envelope, 0.0, 1.0).astype(np.float32)
+
+    mono = np.mean(bus, axis=1).astype(np.float32)
+    body_band = signal.sosfiltfilt(body_sos, mono).astype(np.float32)
+    presence_band = signal.sosfiltfilt(presence_sos, mono).astype(np.float32)
+    air_band = signal.sosfiltfilt(air_sos, mono).astype(np.float32)
+    colored_mono = (
+        (body_band * (0.52 + (focus_envelope * 0.1)))
+        + (presence_band * (0.24 + (focus_envelope * 0.12)))
+        + (air_band * (0.08 + (focus_envelope * 0.04)))
+    ).astype(np.float32)
+    colored = np.stack([colored_mono, colored_mono], axis=1).astype(np.float32)
+
+    lead_pull = np.clip(0.92 - (lead_envelope * 0.12), 0.76, 0.94).astype(np.float32)
+    texture_push = 1.0 + (texture_envelope * 0.08)
+    tonal_bus = colored * (focus_envelope[:, np.newaxis] * 0.36 + 0.06)
+    tonal_bus *= lead_pull[:, np.newaxis]
+    tonal_bus *= texture_push[: tonal_bus.shape[0], np.newaxis]
+    tonal_bus = np.tanh(tonal_bus * (1.12 + (focus_envelope[:, np.newaxis] * 0.22))).astype(np.float32)
+
+    mid = ((tonal_bus[:, 0] + tonal_bus[:, 1]) * 0.5).astype(np.float32)
+    side = ((tonal_bus[:, 0] - tonal_bus[:, 1]) * 0.5).astype(np.float32)
+    side *= (1.04 + (focus_envelope * 0.24))
+    tonal_bus = np.stack([mid + side, mid - side], axis=1).astype(np.float32)
+    tonal_bus = np.clip(tonal_bus, -0.34, 0.34).astype(np.float32)
+
+    layer_name = "motif-tonal-memory"
+    layer_renders[layer_name] = tonal_bus
+    rendered_layers.append(
+        {
+            "name": layer_name,
+            "role": "tonal_glue",
+            "pattern": None,
+            "trigger_positions": [],
+            "source_path": None,
+            "copied_input_path": None,
+            "render_mode": "motif_tonal_memory_bus",
+        }
+    )
+
+    return {
+        "mode": "motif_tonal_memory_bus",
+        "profile": "motif_tonal_memory_bus_v1",
+        "candidate_layers": candidate_layers,
+        "lead_layers": lead_layers,
+        "hook_layers": hook_layers,
+        "resample_layers": resample_layers,
+        "texture_layers": texture_layers,
+        "bus_layer_name": layer_name,
+        "bus_peak": round(float(np.max(np.abs(tonal_bus))) if tonal_bus.size else 0.0, 6),
+        "focus_peak": round(float(np.max(focus_envelope)) if focus_envelope.size else 0.0, 6),
+        "section_bloom_peak": round(float(np.max(section_bloom)) if section_bloom.size else 0.0, 6),
+        "events_count": int(len(source_layers)),
+        "smoothing_samples": int(smoothing_samples),
+    }
+
+
+def _apply_pattern_ensemble_section_contrast(
+    layer_renders: Dict[str, "np.ndarray"],
+    rendered_layers: List[Dict[str, Any]],
+    sections: Optional[Iterable[Dict[str, Any]]],
+    sample_rate: int,
+    tempo_bpm: float,
+) -> Optional[Dict[str, Any]]:
+    resolved_sections = list(sections or [])
+    if np is None or signal is None or not layer_renders or not resolved_sections:
+        return None
+
+    role_by_name = {
+        _clean_text(layer.get("name")): _clean_text(layer.get("role")).lower()
+        for layer in rendered_layers
+        if _clean_text(layer.get("name"))
+    }
+    drum_roles = {"kick", "snare", "clap", "hat", "hihat", "perc", "drum_bed"}
+    drum_width_roles = {"snare", "clap", "hat", "hihat", "perc", "drum_bed"}
+    sample_roles = {"melody", "lead", "chop", "texture", "resample", "tonal_glue"}
+    bass_layers = [name for name, role in role_by_name.items() if role == "bass" and name in layer_renders]
+    selected_drum_layers = set(
+        _select_drum_character_layers(
+            role_by_name=role_by_name,
+            available_layers=[name for name, role in role_by_name.items() if role in drum_roles and name in layer_renders],
+        )
+    )
+    representative_sample_layers = _select_sample_stack_focus_layers(
+        role_by_name=role_by_name,
+        available_layers=[name for name, role in role_by_name.items() if role in sample_roles and name in layer_renders],
+    )
+    selected_sample_layers = set(representative_sample_layers[:3])
+    focus_layer_names = list(selected_drum_layers) + bass_layers + list(selected_sample_layers)
+    total_samples = max(layer_renders[name].shape[0] for name in focus_layer_names if name in layer_renders)
+    samples_per_bar = max(1, int(round((240.0 / float(max(1.0, tempo_bpm))) * sample_rate)))
+    smoothing_samples = max(128, int(round(sample_rate * 0.04)))
+    nyquist_hz = sample_rate * 0.5
+
+    drum_gain_db = np.zeros(total_samples, dtype=np.float32)
+    drum_width = np.zeros(total_samples, dtype=np.float32)
+    drum_punch = np.zeros(total_samples, dtype=np.float32)
+    bass_gain_db = np.zeros(total_samples, dtype=np.float32)
+    bass_weight = np.zeros(total_samples, dtype=np.float32)
+    bass_harmonics = np.zeros(total_samples, dtype=np.float32)
+    sample_gain_db = np.zeros(total_samples, dtype=np.float32)
+    sample_width = np.zeros(total_samples, dtype=np.float32)
+    sample_presence = np.zeros(total_samples, dtype=np.float32)
+    sample_air = np.zeros(total_samples, dtype=np.float32)
+    sample_mud_tuck = np.zeros(total_samples, dtype=np.float32)
+    section_events: List[Dict[str, Any]] = []
+
+    section_profile_map = {
+        "intro": {
+            "drum_gain_db": -0.24,
+            "drum_width": 0.0,
+            "drum_punch": 0.004,
+            "bass_gain_db": -0.14,
+            "bass_weight": 0.006,
+            "bass_harmonics": 0.002,
+            "sample_gain_db": -0.16,
+            "sample_width": 0.02,
+            "sample_presence": 0.004,
+            "sample_air": 0.002,
+            "sample_mud_tuck": 0.006,
+        },
+        "verse": {
+            "drum_gain_db": 0.0,
+            "drum_width": -0.01,
+            "drum_punch": 0.012,
+            "bass_gain_db": 0.0,
+            "bass_weight": 0.012,
+            "bass_harmonics": 0.004,
+            "sample_gain_db": -0.18,
+            "sample_width": -0.03,
+            "sample_presence": 0.003,
+            "sample_air": 0.0,
+            "sample_mud_tuck": 0.01,
+        },
+        "pre_hook": {
+            "drum_gain_db": 0.14,
+            "drum_width": 0.02,
+            "drum_punch": 0.02,
+            "bass_gain_db": -0.06,
+            "bass_weight": 0.008,
+            "bass_harmonics": 0.01,
+            "sample_gain_db": 0.06,
+            "sample_width": 0.08,
+            "sample_presence": 0.014,
+            "sample_air": 0.008,
+            "sample_mud_tuck": 0.015,
+        },
+        "hook": {
+            "drum_gain_db": 0.28,
+            "drum_width": 0.045,
+            "drum_punch": 0.028,
+            "bass_gain_db": 0.16,
+            "bass_weight": 0.026,
+            "bass_harmonics": 0.014,
+            "sample_gain_db": 0.12,
+            "sample_width": 0.12,
+            "sample_presence": 0.022,
+            "sample_air": 0.012,
+            "sample_mud_tuck": 0.02,
+        },
+        "break": {
+            "drum_gain_db": -0.52,
+            "drum_width": -0.04,
+            "drum_punch": -0.004,
+            "bass_gain_db": -0.34,
+            "bass_weight": -0.004,
+            "bass_harmonics": 0.0,
+            "sample_gain_db": -0.22,
+            "sample_width": -0.01,
+            "sample_presence": -0.003,
+            "sample_air": -0.002,
+            "sample_mud_tuck": 0.004,
+        },
+        "outro": {
+            "drum_gain_db": -0.26,
+            "drum_width": -0.01,
+            "drum_punch": 0.002,
+            "bass_gain_db": -0.2,
+            "bass_weight": 0.004,
+            "bass_harmonics": 0.002,
+            "sample_gain_db": -0.12,
+            "sample_width": 0.01,
+            "sample_presence": 0.002,
+            "sample_air": 0.002,
+            "sample_mud_tuck": 0.008,
+        },
+    }
+
+    current_bar = 0
+    for section in resolved_sections:
+        section_name = _resolve_pattern_section_mix_key(section)
+        bars = max(1, int((section or {}).get("bars") or 1))
+        start_index = min(total_samples, current_bar * samples_per_bar)
+        end_index = min(total_samples, (current_bar + bars) * samples_per_bar)
+        current_bar += bars
+        if end_index <= start_index:
+            continue
+        profile = dict(section_profile_map.get(section_name) or section_profile_map["verse"])
+        energy = float((section or {}).get("energy") or 0.92)
+        drum_density = float((section or {}).get("drum_density") or 0.92)
+        melodic_density = float((section or {}).get("melodic_density") or 0.88)
+        chop_density = float((section or {}).get("chop_density") or 0.84)
+        bass_density = float((section or {}).get("bass_density") or 0.94)
+
+        profile["drum_gain_db"] += (drum_density - 0.92) * 0.8
+        profile["drum_punch"] += (drum_density - 0.92) * 0.016
+        profile["bass_gain_db"] += (bass_density - 0.94) * 0.7
+        profile["bass_weight"] += (bass_density - 0.94) * 0.012
+        profile["sample_gain_db"] += (max(melodic_density, chop_density) - 0.88) * 0.7
+        profile["sample_width"] += (chop_density - 0.84) * 0.08
+        profile["sample_presence"] += (energy - 0.92) * 0.018
+        profile["sample_air"] += (energy - 0.92) * 0.012
+        profile["sample_mud_tuck"] += max(0.0, chop_density - 0.84) * 0.01
+
+        drum_gain_db[start_index:end_index] = float(profile["drum_gain_db"])
+        drum_width[start_index:end_index] = float(profile["drum_width"])
+        drum_punch[start_index:end_index] = float(profile["drum_punch"])
+        bass_gain_db[start_index:end_index] = float(profile["bass_gain_db"])
+        bass_weight[start_index:end_index] = float(profile["bass_weight"])
+        bass_harmonics[start_index:end_index] = float(profile["bass_harmonics"])
+        sample_gain_db[start_index:end_index] = float(profile["sample_gain_db"])
+        sample_width[start_index:end_index] = float(profile["sample_width"])
+        sample_presence[start_index:end_index] = float(profile["sample_presence"])
+        sample_air[start_index:end_index] = float(profile["sample_air"])
+        sample_mud_tuck[start_index:end_index] = float(profile["sample_mud_tuck"])
+        section_events.append(
+            {
+                "section_name": section_name,
+                "bars": int(bars),
+                "drum_gain_db": round(float(profile["drum_gain_db"]), 4),
+                "bass_gain_db": round(float(profile["bass_gain_db"]), 4),
+                "sample_gain_db": round(float(profile["sample_gain_db"]), 4),
+                "sample_width": round(float(profile["sample_width"]), 4),
+            }
+        )
+
+    def _smooth(values: "np.ndarray") -> "np.ndarray":
+        if values.size <= smoothing_samples:
+            return values.astype(np.float32)
+        kernel = np.hanning(smoothing_samples).astype(np.float32)
+        kernel_sum = float(np.sum(kernel))
+        if kernel_sum <= 0:
+            return values.astype(np.float32)
+        kernel /= kernel_sum
+        return np.convolve(values, kernel, mode="same").astype(np.float32)
+
+    drum_gain_db = _smooth(drum_gain_db)
+    drum_width = _smooth(drum_width)
+    drum_punch = _smooth(drum_punch)
+    bass_gain_db = _smooth(bass_gain_db)
+    bass_weight = _smooth(bass_weight)
+    bass_harmonics = _smooth(bass_harmonics)
+    sample_gain_db = _smooth(sample_gain_db)
+    sample_width = _smooth(sample_width)
+    sample_presence = _smooth(sample_presence)
+    sample_air = _smooth(sample_air)
+    sample_mud_tuck = _smooth(sample_mud_tuck)
+
+    def _bandpass(low_hz: float, high_hz: float) -> Optional[Any]:
+        low = max(40.0, float(low_hz))
+        high = min(float(high_hz), nyquist_hz * 0.92)
+        if high <= low + 60.0:
+            return None
+        return signal.butter(2, [low, high], btype="bandpass", fs=sample_rate, output="sos")
+
+    drum_body_sos = _bandpass(68.0, 240.0)
+    drum_attack_sos = _bandpass(1700.0, 5200.0)
+    bass_body_sos = _bandpass(46.0, 180.0)
+    bass_harmonic_sos = _bandpass(220.0, 920.0)
+    sample_presence_sos = _bandpass(1450.0, 4600.0)
+    sample_air_sos = _bandpass(4600.0, 8800.0)
+    sample_mud_sos = _bandpass(220.0, 760.0)
+
+    processed_layers = 0
+    touched_roles: Dict[str, int] = {}
+
+    def _apply_width(render: "np.ndarray", width_env: "np.ndarray") -> "np.ndarray":
+        mid = ((render[:, 0] + render[:, 1]) * 0.5).astype(np.float32)
+        side = ((render[:, 0] - render[:, 1]) * 0.5).astype(np.float32)
+        side *= width_env[: side.shape[0]]
+        return np.stack([mid + side, mid - side], axis=1).astype(np.float32)
+
+    processing_layers: List[str] = []
+    seen_processing_layers: Set[str] = set()
+
+    def _filter_zero_phase(sos: Optional[Any], mono: "np.ndarray") -> "np.ndarray":
+        if sos is None:
+            return np.zeros(mono.shape[0], dtype=np.float32)
+        return signal.sosfiltfilt(sos, mono).astype(np.float32)
+
+    def _filter_fast(sos: Optional[Any], mono: "np.ndarray") -> "np.ndarray":
+        if sos is None:
+            return np.zeros(mono.shape[0], dtype=np.float32)
+        return signal.sosfilt(sos, mono).astype(np.float32)
+
+    def _queue_layer(name: str) -> None:
+        if name in layer_renders and name not in seen_processing_layers:
+            processing_layers.append(name)
+            seen_processing_layers.add(name)
+
+    for layer_name in sorted(selected_drum_layers):
+        _queue_layer(layer_name)
+    for layer_name in bass_layers:
+        _queue_layer(layer_name)
+    for layer_name in representative_sample_layers[:3]:
+        _queue_layer(layer_name)
+
+    for layer_name in processing_layers:
+        role_name = role_by_name.get(layer_name, "")
+        render = layer_renders.get(layer_name)
+        if render is None or render.size == 0:
+            continue
+        role = role_name or ""
+
+        if role in drum_roles:
+            if layer_name not in selected_drum_layers:
+                continue
+            gain_linear = np.power(10.0, np.clip(drum_gain_db[: render.shape[0]], -1.2, 0.8) / 20.0).astype(np.float32)
+            processed = render * gain_linear[:, np.newaxis]
+            if drum_body_sos is not None and drum_attack_sos is not None:
+                body_scale = 1.15 if role == "kick" else 0.44 if role in {"snare", "clap"} else 0.18
+                attack_scale = 0.22 if role == "kick" else 0.92 if role in {"snare", "clap"} else 0.7
+                if role in {"kick", "snare", "clap"}:
+                    layer_punch = drum_punch[: render.shape[0]]
+                    mono = np.mean(processed, axis=1).astype(np.float32)
+                    body = _filter_zero_phase(drum_body_sos, mono)
+                    attack = _filter_fast(drum_attack_sos, mono)
+                    adjustment = ((body * (layer_punch * body_scale)) + (attack * (layer_punch * attack_scale))).astype(np.float32)
+                    processed[:, 0] += adjustment
+                    processed[:, 1] += adjustment
+                elif role in {"hat", "hihat", "perc"}:
+                    layer_punch = drum_punch[: render.shape[0]]
+                    mono = np.mean(processed, axis=1).astype(np.float32)
+                    attack = _filter_fast(drum_attack_sos, mono)
+                    adjustment = (attack * (layer_punch * attack_scale * 0.75)).astype(np.float32)
+                    processed[:, 0] += adjustment
+                    processed[:, 1] += adjustment
+            if role in drum_width_roles:
+                processed = _apply_width(processed, 1.0 + np.clip(drum_width[: render.shape[0]], -0.08, 0.14))
+            layer_renders[layer_name] = np.clip(np.tanh(processed * 1.01), -1.0, 1.0).astype(np.float32)
+            processed_layers += 1
+            touched_roles[role] = int(touched_roles.get(role, 0)) + 1
+            continue
+
+        if role == "bass":
+            gain_linear = np.power(10.0, np.clip(bass_gain_db[: render.shape[0]], -1.1, 0.7) / 20.0).astype(np.float32)
+            processed = render * gain_linear[:, np.newaxis]
+            if bass_body_sos is not None and bass_harmonic_sos is not None:
+                layer_weight = bass_weight[: render.shape[0]]
+                layer_harm = bass_harmonics[: render.shape[0]]
+                mono = np.mean(processed, axis=1).astype(np.float32)
+                low = _filter_zero_phase(bass_body_sos, mono)
+                harmonic = _filter_fast(bass_harmonic_sos, mono)
+                adjustment = ((low * layer_weight) + (harmonic * layer_harm)).astype(np.float32)
+                processed[:, 0] += adjustment
+                processed[:, 1] += adjustment
+            mid = ((processed[:, 0] + processed[:, 1]) * 0.5).astype(np.float32)
+            side = ((processed[:, 0] - processed[:, 1]) * 0.5).astype(np.float32) * 0.92
+            processed = np.stack([mid + side, mid - side], axis=1).astype(np.float32)
+            layer_renders[layer_name] = np.clip(np.tanh(processed * 1.015), -1.0, 1.0).astype(np.float32)
+            processed_layers += 1
+            touched_roles[role] = int(touched_roles.get(role, 0)) + 1
+            continue
+
+        if role in sample_roles:
+            if layer_name not in selected_sample_layers:
+                continue
+            role_sample_gain_db = sample_gain_db[: render.shape[0]].copy()
+            role_width = sample_width[: render.shape[0]].copy()
+            role_presence = sample_presence[: render.shape[0]].copy()
+            role_air = sample_air[: render.shape[0]].copy()
+            role_mud = sample_mud_tuck[: render.shape[0]].copy()
+
+            lower_name = _clean_text(layer_name).lower()
+            if role == "texture":
+                role_sample_gain_db -= 0.06
+                role_presence *= 0.82
+                role_air *= 0.9
+                role_mud *= 1.12
+            elif role == "resample":
+                role_sample_gain_db += 0.05
+                role_presence *= 1.08
+                role_width *= 1.06
+            elif role == "tonal_glue":
+                role_sample_gain_db += 0.08
+                role_width *= 1.12
+                role_air *= 1.1
+            elif role == "chop" and "hook" in lower_name:
+                role_sample_gain_db += 0.1
+                role_width *= 1.1
+                role_presence *= 1.14
+            elif role in {"melody", "lead"}:
+                role_width *= 0.92
+
+            gain_linear = np.power(10.0, np.clip(role_sample_gain_db, -1.0, 0.9) / 20.0).astype(np.float32)
+            processed = render * gain_linear[:, np.newaxis]
+            if sample_presence_sos is not None and sample_air_sos is not None and sample_mud_sos is not None:
+                mono = np.mean(processed, axis=1).astype(np.float32)
+                adjustment = np.zeros(mono.shape[0], dtype=np.float32)
+                if role in {"melody", "lead", "chop", "resample", "tonal_glue"}:
+                    presence = _filter_fast(sample_presence_sos, mono)
+                    adjustment += presence * role_presence
+                if role in {"texture", "chop", "resample", "tonal_glue"}:
+                    air = _filter_fast(sample_air_sos, mono)
+                    adjustment += air * role_air
+                if role in {"texture", "chop"}:
+                    mud = _filter_zero_phase(sample_mud_sos, mono)
+                    adjustment -= mud * role_mud
+                adjustment = adjustment.astype(np.float32)
+                processed[:, 0] += adjustment
+                processed[:, 1] += adjustment
+            processed = _apply_width(processed, 1.0 + np.clip(role_width, -0.08, 0.18))
+            layer_renders[layer_name] = np.clip(np.tanh(processed * 1.01), -1.0, 1.0).astype(np.float32)
+            processed_layers += 1
+            touched_roles[role] = int(touched_roles.get(role, 0)) + 1
+
+    if processed_layers <= 0:
+        return None
+
+    return {
+        "mode": "ensemble_section_contrast",
+        "profile": "boombap_ensemble_section_contrast_v1",
+        "processed_layers_count": int(processed_layers),
+        "selected_drum_layers": sorted(selected_drum_layers),
+        "selected_sample_layers": sorted(selected_sample_layers),
+        "touched_roles": touched_roles,
+        "events": section_events,
+        "events_count": len(section_events),
+        "smoothing_samples": int(smoothing_samples),
+        "max_drum_gain_db": round(float(np.max(drum_gain_db)) if drum_gain_db.size else 0.0, 4),
+        "max_bass_gain_db": round(float(np.max(bass_gain_db)) if bass_gain_db.size else 0.0, 4),
+        "max_sample_gain_db": round(float(np.max(sample_gain_db)) if sample_gain_db.size else 0.0, 4),
+        "max_sample_width": round(float(np.max(sample_width)) if sample_width.size else 0.0, 4),
+    }
+
+
+def _apply_pattern_hook_memory_lift(
+    layer_renders: Dict[str, "np.ndarray"],
+    rendered_layers: List[Dict[str, Any]],
+    sections: Optional[Iterable[Dict[str, Any]]],
+    sample_rate: int,
+    tempo_bpm: float,
+) -> Optional[Dict[str, Any]]:
+    resolved_sections = list(sections or [])
+    if np is None or signal is None or not layer_renders or not resolved_sections:
+        return None
+
+    role_by_name = {
+        _clean_text(layer.get("name")): _clean_text(layer.get("role")).lower()
+        for layer in rendered_layers
+        if _clean_text(layer.get("name"))
+    }
+    candidate_layers = _select_sample_stack_focus_layers(
+        role_by_name=role_by_name,
+        available_layers=[
+            name
+            for name, role in role_by_name.items()
+            if role in {"melody", "lead", "chop", "texture", "resample", "tonal_glue"} and name in layer_renders
+        ],
+    )
+    lead_layers = [name for name in candidate_layers if role_by_name.get(name) in {"melody", "lead"}][:1]
+    hook_layers = [
+        name
+        for name in candidate_layers
+        if role_by_name.get(name) == "chop" and "hook" in _clean_text(name).lower()
+    ][:1]
+    resample_layers = [name for name in candidate_layers if role_by_name.get(name) == "resample"][:1]
+    tonal_layers = [name for name in candidate_layers if role_by_name.get(name) == "tonal_glue"][:1]
+    texture_layers = [name for name in candidate_layers if role_by_name.get(name) == "texture"][:1]
+    source_layers = lead_layers + hook_layers + resample_layers + tonal_layers
+    if not lead_layers or not (hook_layers or resample_layers or tonal_layers):
+        return None
+
+    total_samples = max(layer_renders[name].shape[0] for name in (source_layers + texture_layers) if name in layer_renders)
+    samples_per_bar = max(1, int(round((240.0 / float(max(1.0, tempo_bpm))) * sample_rate)))
+    smoothing_samples = max(96, int(round(sample_rate * 0.018)))
+    hook_focus = np.zeros(total_samples, dtype=np.float32)
+    hook_pulse = np.zeros(total_samples, dtype=np.float32)
+    section_events: List[Dict[str, Any]] = []
+    current_bar = 0
+
+    for section in resolved_sections:
+        section_name = _resolve_pattern_section_mix_key(section)
+        bars = max(1, int((section or {}).get("bars") or 1))
+        start_index = min(total_samples, current_bar * samples_per_bar)
+        end_index = min(total_samples, (current_bar + bars) * samples_per_bar)
+        if end_index > start_index:
+            if section_name == "pre_hook":
+                hook_focus[start_index:end_index] = np.maximum(hook_focus[start_index:end_index], 0.56)
+            elif section_name == "hook":
+                hook_focus[start_index:end_index] = np.maximum(hook_focus[start_index:end_index], 1.0)
+                for bar_offset in range(bars):
+                    bar_start = start_index + (bar_offset * samples_per_bar)
+                    for pulse_ratio, pulse_gain in ((0.0, 1.0), (0.5, 0.82)):
+                        pulse_center = min(end_index - 1, bar_start + int(round(samples_per_bar * pulse_ratio)))
+                        pulse_half = max(48, int(round(samples_per_bar * 0.08)))
+                        pulse_start = max(start_index, pulse_center - pulse_half)
+                        pulse_end = min(end_index, pulse_center + pulse_half)
+                        if pulse_end > pulse_start:
+                            pulse = np.hanning(max(3, pulse_end - pulse_start)).astype(np.float32)
+                            hook_pulse[pulse_start:pulse_end] = np.maximum(
+                                hook_pulse[pulse_start:pulse_end],
+                                pulse * float(pulse_gain),
+                            )
+                section_events.append(
+                    {
+                        "section_name": section_name,
+                        "bars": int(bars),
+                        "bar_start": int(current_bar),
+                        "pulse_points_per_bar": 2,
+                    }
+                )
+        current_bar += bars
+
+    if not np.any(hook_focus > 0):
+        return None
+
+    if hook_focus.size > smoothing_samples:
+        kernel = np.hanning(smoothing_samples).astype(np.float32)
+        kernel_sum = float(np.sum(kernel))
+        if kernel_sum > 0:
+            kernel /= kernel_sum
+            hook_focus = np.convolve(hook_focus, kernel, mode="same").astype(np.float32)
+            hook_pulse = np.convolve(hook_pulse, kernel, mode="same").astype(np.float32)
+    hook_focus = np.clip(hook_focus, 0.0, 1.0).astype(np.float32)
+    hook_pulse = np.clip(hook_pulse, 0.0, 1.0).astype(np.float32)
+    hook_energy = np.clip(np.maximum(hook_focus * 0.62, hook_pulse), 0.0, 1.0).astype(np.float32)
+
+    nyquist_hz = sample_rate * 0.5
+
+    def _bandpass(low_hz: float, high_hz: float) -> Optional[Any]:
+        low = max(40.0, float(low_hz))
+        high = min(float(high_hz), nyquist_hz * 0.92)
+        if high <= low + 60.0:
+            return None
+        return signal.butter(2, [low, high], btype="bandpass", fs=sample_rate, output="sos")
+
+    lead_presence_sos = _bandpass(1650.0, 4600.0)
+    lead_body_sos = _bandpass(260.0, 1350.0)
+    hook_presence_sos = _bandpass(1900.0, 5400.0)
+    resample_presence_sos = _bandpass(1300.0, 4200.0)
+    texture_mud_sos = _bandpass(220.0, 760.0)
+    bus_presence_sos = _bandpass(1350.0, 5200.0)
+    bus_air_sos = _bandpass(4200.0, 8600.0)
+
+    processed_layers = 0
+    touched_layers: List[str] = []
+
+    def _apply_width(render: "np.ndarray", width_env: "np.ndarray") -> "np.ndarray":
+        mid = ((render[:, 0] + render[:, 1]) * 0.5).astype(np.float32)
+        side = ((render[:, 0] - render[:, 1]) * 0.5).astype(np.float32)
+        side *= width_env[: side.shape[0]]
+        return np.stack([mid + side, mid - side], axis=1).astype(np.float32)
+
+    def _apply_mono_band_mix(
+        render: "np.ndarray",
+        primary_sos: Optional[Any],
+        primary_gain: "np.ndarray",
+        secondary_sos: Optional[Any] = None,
+        secondary_gain: Optional["np.ndarray"] = None,
+    ) -> "np.ndarray":
+        processed = render.copy()
+        mono = np.mean(processed, axis=1).astype(np.float32)
+        adjustment = np.zeros(mono.shape[0], dtype=np.float32)
+        if primary_sos is not None:
+            adjustment += signal.sosfiltfilt(primary_sos, mono).astype(np.float32) * primary_gain[: mono.shape[0]]
+        if secondary_sos is not None and secondary_gain is not None:
+            adjustment += signal.sosfiltfilt(secondary_sos, mono).astype(np.float32) * secondary_gain[: mono.shape[0]]
+        processed[:, 0] += adjustment
+        processed[:, 1] += adjustment
+        return processed.astype(np.float32)
+
+    for layer_name in lead_layers:
+        render = layer_renders.get(layer_name)
+        if render is None or render.size == 0:
+            continue
+        usable_focus = hook_focus[: render.shape[0]]
+        usable_pulse = hook_pulse[: render.shape[0]]
+        if lead_presence_sos is not None and lead_body_sos is not None:
+            processed = _apply_mono_band_mix(
+                render,
+                lead_body_sos,
+                usable_focus * 0.008,
+                lead_presence_sos,
+                usable_pulse * 0.024,
+            )
+        else:
+            processed = render.copy()
+        gain = 1.0 + (usable_focus * 0.022) + (usable_pulse * 0.03)
+        processed *= gain[:, np.newaxis]
+        processed = _apply_width(processed, 1.0 + (usable_focus * 0.04) + (usable_pulse * 0.03))
+        layer_renders[layer_name] = np.clip(np.tanh(processed * 1.01), -1.0, 1.0).astype(np.float32)
+        processed_layers += 1
+        touched_layers.append(layer_name)
+
+    for layer_name in hook_layers:
+        render = layer_renders.get(layer_name)
+        if render is None or render.size == 0:
+            continue
+        usable_focus = hook_focus[: render.shape[0]]
+        usable_pulse = hook_pulse[: render.shape[0]]
+        if hook_presence_sos is not None:
+            processed = _apply_mono_band_mix(
+                render,
+                hook_presence_sos,
+                (usable_focus * 0.022) + (usable_pulse * 0.038),
+            )
+        else:
+            processed = render.copy()
+        gain = 1.0 + (usable_focus * 0.028) + (usable_pulse * 0.042)
+        processed *= gain[:, np.newaxis]
+        processed = _apply_width(processed, 1.0 + (usable_focus * 0.08) + (usable_pulse * 0.045))
+        layer_renders[layer_name] = np.clip(np.tanh(processed * 1.02), -1.0, 1.0).astype(np.float32)
+        processed_layers += 1
+        touched_layers.append(layer_name)
+
+    for layer_name in resample_layers + tonal_layers:
+        render = layer_renders.get(layer_name)
+        if render is None or render.size == 0:
+            continue
+        usable_focus = hook_focus[: render.shape[0]]
+        usable_pulse = hook_pulse[: render.shape[0]]
+        if resample_presence_sos is not None:
+            processed = _apply_mono_band_mix(
+                render,
+                resample_presence_sos,
+                (usable_focus * 0.016) + (usable_pulse * 0.024),
+            )
+        else:
+            processed = render.copy()
+        gain = 1.0 + (usable_focus * 0.02) + (usable_pulse * 0.024)
+        processed *= gain[:, np.newaxis]
+        processed = _apply_width(processed, 1.0 + (usable_focus * 0.06))
+        layer_renders[layer_name] = np.clip(np.tanh(processed * 1.012), -1.0, 1.0).astype(np.float32)
+        processed_layers += 1
+        touched_layers.append(layer_name)
+
+    for layer_name in texture_layers:
+        render = layer_renders.get(layer_name)
+        if render is None or render.size == 0:
+            continue
+        usable_focus = hook_focus[: render.shape[0]]
+        usable_pulse = hook_pulse[: render.shape[0]]
+        if texture_mud_sos is not None:
+            processed = _apply_mono_band_mix(
+                render,
+                texture_mud_sos,
+                -((usable_focus * 0.012) + (usable_pulse * 0.014)),
+            )
+        else:
+            processed = render.copy()
+        gain = 1.0 - (usable_pulse * 0.026)
+        processed *= gain[:, np.newaxis]
+        processed = _apply_width(processed, 1.0 + (usable_focus * 0.03))
+        layer_renders[layer_name] = np.clip(processed, -1.0, 1.0).astype(np.float32)
+        processed_layers += 1
+        touched_layers.append(layer_name)
+
+    bus = np.zeros((total_samples, 2), dtype=np.float32)
+    for layer_name in source_layers:
+        render = layer_renders.get(layer_name)
+        if render is None or render.size == 0:
+            continue
+        weight = 0.24 if layer_name in lead_layers else 0.3 if layer_name in hook_layers else 0.22 if layer_name in tonal_layers else 0.14
+        bus[: render.shape[0]] += render * weight
+    bus *= (hook_energy[:, np.newaxis] * 0.34)
+    if np.any(np.abs(bus) > 1e-7) and bus_presence_sos is not None and bus_air_sos is not None:
+        bus_mono = np.mean(bus, axis=1).astype(np.float32)
+        presence = signal.sosfiltfilt(bus_presence_sos, bus_mono).astype(np.float32)
+        air = signal.sosfiltfilt(bus_air_sos, bus_mono).astype(np.float32)
+        bus_colored = ((bus_mono * 0.38) + (presence * 0.42) + (air * 0.1)).astype(np.float32)
+        bus = np.stack([bus_colored, bus_colored], axis=1).astype(np.float32)
+        bus = np.tanh(bus * (1.08 + (hook_energy[:, np.newaxis] * 0.18))).astype(np.float32)
+        bus = _apply_width(bus, 1.0 + (hook_focus * 0.14) + (hook_pulse * 0.08))
+        bus = np.clip(bus, -0.32, 0.32).astype(np.float32)
+        layer_name = "hook-memory-bus"
+        layer_renders[layer_name] = bus
+        rendered_layers.append(
+            {
+                "name": layer_name,
+                "role": "hook_memory",
+                "pattern": None,
+                "trigger_positions": [],
+                "source_path": None,
+                "copied_input_path": None,
+                "render_mode": "hook_memory_lift",
+            }
+        )
+    else:
+        layer_name = ""
+
+    if processed_layers <= 0 and not layer_name:
+        return None
+
+    return {
+        "mode": "hook_memory_lift",
+        "profile": "boombap_hook_memory_lift_v1",
+        "candidate_layers": candidate_layers,
+        "lead_layers": lead_layers,
+        "hook_layers": hook_layers,
+        "resample_layers": resample_layers,
+        "tonal_layers": tonal_layers,
+        "texture_layers": texture_layers,
+        "bus_layer_name": layer_name or None,
+        "processed_layers_count": int(processed_layers),
+        "touched_layers": touched_layers[:24],
+        "events": section_events,
+        "events_count": len(section_events),
+        "hook_focus_peak": round(float(np.max(hook_focus)) if hook_focus.size else 0.0, 6),
+        "hook_pulse_peak": round(float(np.max(hook_pulse)) if hook_pulse.size else 0.0, 6),
+        "smoothing_samples": int(smoothing_samples),
+    }
+
+
 def _apply_pattern_layer_section_mix(
     layer_render: "np.ndarray",
     role: str,
@@ -10364,77 +11699,115 @@ def _apply_pattern_layer_section_mix(
         return None
 
     total_samples = layer_render.shape[0]
-    samples_per_bar = max(1, int(round((240.0 / float(max(1.0, tempo_bpm))) * sample_rate)))
-    gain_db_envelope = np.zeros(total_samples, dtype=np.float32)
-    width_envelope = np.zeros(total_samples, dtype=np.float32)
-    current_bar = 0
-    section_events: List[Dict[str, Any]] = []
-
-    role_section_gains = {
-        "hat": {"intro": -0.7, "verse": 0.0, "pre_hook": 0.55, "hook": 0.42, "break": -1.0, "outro": -0.55},
-        "hihat": {"intro": -0.7, "verse": 0.0, "pre_hook": 0.55, "hook": 0.42, "break": -1.0, "outro": -0.55},
-        "perc": {"intro": -0.95, "verse": -0.08, "pre_hook": 0.18, "hook": 0.26, "break": -1.1, "outro": -0.7},
-        "snare": {"intro": -0.2, "verse": 0.0, "pre_hook": 0.08, "hook": 0.18, "break": -0.28, "outro": -0.18},
-        "clap": {"intro": -0.38, "verse": 0.0, "pre_hook": 0.14, "hook": 0.24, "break": -0.3, "outro": -0.24},
-        "melody": {"intro": -0.38, "verse": 0.0, "pre_hook": -0.12, "hook": 0.3, "break": -0.62, "outro": -0.32},
-        "lead": {"intro": -0.3, "verse": 0.0, "pre_hook": 0.0, "hook": 0.26, "break": -0.55, "outro": -0.25},
-        "texture": {"intro": 0.1, "verse": -0.08, "pre_hook": -0.28, "hook": 0.16, "break": -0.42, "outro": -0.1},
-        "chop": {"intro": -0.5, "verse": 0.0, "pre_hook": 0.32, "hook": 0.28, "break": -0.72, "outro": -0.45},
-        "drum_bed": {"intro": -0.6, "verse": 0.0, "pre_hook": 0.18, "hook": 0.28, "break": -0.75, "outro": -0.45},
-        "resample": {"intro": -0.65, "verse": 0.0, "pre_hook": 0.2, "hook": 0.32, "break": -0.84, "outro": -0.55},
-    }
-    role_section_width = {
-        "hat": {"intro": 0.0, "verse": 0.02, "pre_hook": 0.05, "hook": 0.08, "break": -0.03, "outro": 0.0},
-        "hihat": {"intro": 0.0, "verse": 0.02, "pre_hook": 0.05, "hook": 0.08, "break": -0.03, "outro": 0.0},
-        "perc": {"intro": 0.01, "verse": 0.03, "pre_hook": 0.07, "hook": 0.1, "break": -0.04, "outro": 0.01},
-        "snare": {"intro": 0.0, "verse": 0.0, "pre_hook": 0.01, "hook": 0.03, "break": 0.0, "outro": 0.0},
-        "clap": {"intro": 0.0, "verse": 0.02, "pre_hook": 0.05, "hook": 0.09, "break": 0.0, "outro": 0.01},
-        "melody": {"intro": 0.02, "verse": 0.06, "pre_hook": 0.04, "hook": 0.15, "break": -0.02, "outro": 0.03},
-        "lead": {"intro": 0.02, "verse": 0.05, "pre_hook": 0.05, "hook": 0.13, "break": -0.01, "outro": 0.02},
-        "texture": {"intro": 0.03, "verse": 0.05, "pre_hook": 0.02, "hook": 0.11, "break": -0.04, "outro": 0.02},
-        "chop": {"intro": 0.0, "verse": 0.03, "pre_hook": 0.08, "hook": 0.12, "break": -0.02, "outro": 0.0},
-        "drum_bed": {"intro": 0.0, "verse": 0.02, "pre_hook": 0.04, "hook": 0.06, "break": -0.03, "outro": 0.0},
-        "resample": {"intro": 0.0, "verse": 0.03, "pre_hook": 0.06, "hook": 0.1, "break": -0.02, "outro": 0.0},
-    }
-
-    for section in resolved_sections:
-        section_name = _resolve_pattern_section_mix_key(section)
-        bars = max(1, int((section or {}).get("bars") or 1))
-        start_index = min(total_samples, current_bar * samples_per_bar)
-        end_index = min(total_samples, (current_bar + bars) * samples_per_bar)
-        if end_index <= start_index:
-            current_bar += bars
-            continue
-        gain_db = float((role_section_gains.get(resolved_role) or {}).get(section_name, 0.0))
-        width_gain = float((role_section_width.get(resolved_role) or {}).get(section_name, 0.0))
-        gain_db_envelope[start_index:end_index] += gain_db
-        width_envelope[start_index:end_index] += width_gain
-        section_events.append(
-            {
-                "section_name": section_name,
-                "song_role": _clean_text((section or {}).get("song_role")).lower() or section_name,
-                "bars": int(bars),
-                "gain_db": round(gain_db, 4),
-                "width_gain": round(width_gain, 4),
-            }
+    section_signature = tuple(
+        (
+            _clean_text((section or {}).get("name")).lower(),
+            _clean_text((section or {}).get("song_role")).lower(),
+            _clean_text((section or {}).get("section_family")).lower(),
+            int((section or {}).get("bars") or 1),
         )
-        current_bar += bars
+        for section in resolved_sections
+    )
+    cache_key = (
+        resolved_role,
+        int(sample_rate),
+        round(float(tempo_bpm), 4),
+        int(total_samples),
+        section_signature,
+    )
+    cached_profile = _SECTION_MIX_PROFILE_CACHE.get(cache_key)
+    if cached_profile is None:
+        samples_per_bar = max(1, int(round((240.0 / float(max(1.0, tempo_bpm))) * sample_rate)))
+        gain_db_envelope = np.zeros(total_samples, dtype=np.float32)
+        width_envelope = np.zeros(total_samples, dtype=np.float32)
+        current_bar = 0
+        section_events: List[Dict[str, Any]] = []
 
-    smoothing_samples = max(64, int(round(sample_rate * 0.025)))
-    if total_samples > smoothing_samples:
-        kernel = np.hanning(smoothing_samples).astype(np.float32)
-        kernel_sum = float(np.sum(kernel))
-        if kernel_sum > 0:
-            kernel /= kernel_sum
-            gain_db_envelope = np.convolve(gain_db_envelope, kernel, mode="same").astype(np.float32)
-            width_envelope = np.convolve(width_envelope, kernel, mode="same").astype(np.float32)
+        role_section_gains = {
+            "hat": {"intro": -0.7, "verse": 0.0, "pre_hook": 0.55, "hook": 0.42, "break": -1.0, "outro": -0.55},
+            "hihat": {"intro": -0.7, "verse": 0.0, "pre_hook": 0.55, "hook": 0.42, "break": -1.0, "outro": -0.55},
+            "perc": {"intro": -0.95, "verse": -0.08, "pre_hook": 0.18, "hook": 0.26, "break": -1.1, "outro": -0.7},
+            "snare": {"intro": -0.2, "verse": 0.0, "pre_hook": 0.08, "hook": 0.18, "break": -0.28, "outro": -0.18},
+            "clap": {"intro": -0.38, "verse": 0.0, "pre_hook": 0.14, "hook": 0.24, "break": -0.3, "outro": -0.24},
+            "melody": {"intro": -0.38, "verse": 0.0, "pre_hook": -0.12, "hook": 0.3, "break": -0.62, "outro": -0.32},
+            "lead": {"intro": -0.3, "verse": 0.0, "pre_hook": 0.0, "hook": 0.26, "break": -0.55, "outro": -0.25},
+            "texture": {"intro": 0.1, "verse": -0.08, "pre_hook": -0.28, "hook": 0.16, "break": -0.42, "outro": -0.1},
+            "chop": {"intro": -0.5, "verse": 0.0, "pre_hook": 0.32, "hook": 0.28, "break": -0.72, "outro": -0.45},
+            "drum_bed": {"intro": -0.6, "verse": 0.0, "pre_hook": 0.18, "hook": 0.28, "break": -0.75, "outro": -0.45},
+            "resample": {"intro": -0.65, "verse": 0.0, "pre_hook": 0.2, "hook": 0.32, "break": -0.84, "outro": -0.55},
+        }
+        role_section_width = {
+            "hat": {"intro": 0.0, "verse": 0.02, "pre_hook": 0.05, "hook": 0.08, "break": -0.03, "outro": 0.0},
+            "hihat": {"intro": 0.0, "verse": 0.02, "pre_hook": 0.05, "hook": 0.08, "break": -0.03, "outro": 0.0},
+            "perc": {"intro": 0.01, "verse": 0.03, "pre_hook": 0.07, "hook": 0.1, "break": -0.04, "outro": 0.01},
+            "snare": {"intro": 0.0, "verse": 0.0, "pre_hook": 0.01, "hook": 0.03, "break": 0.0, "outro": 0.0},
+            "clap": {"intro": 0.0, "verse": 0.02, "pre_hook": 0.05, "hook": 0.09, "break": 0.0, "outro": 0.01},
+            "melody": {"intro": 0.02, "verse": 0.06, "pre_hook": 0.04, "hook": 0.15, "break": -0.02, "outro": 0.03},
+            "lead": {"intro": 0.02, "verse": 0.05, "pre_hook": 0.05, "hook": 0.13, "break": -0.01, "outro": 0.02},
+            "texture": {"intro": 0.03, "verse": 0.05, "pre_hook": 0.02, "hook": 0.11, "break": -0.04, "outro": 0.02},
+            "chop": {"intro": 0.0, "verse": 0.03, "pre_hook": 0.08, "hook": 0.12, "break": -0.02, "outro": 0.0},
+            "drum_bed": {"intro": 0.0, "verse": 0.02, "pre_hook": 0.04, "hook": 0.06, "break": -0.03, "outro": 0.0},
+            "resample": {"intro": 0.0, "verse": 0.03, "pre_hook": 0.06, "hook": 0.1, "break": -0.02, "outro": 0.0},
+        }
 
-    gain_linear = np.power(10.0, np.clip(gain_db_envelope, -1.2, 0.8) / 20.0).astype(np.float32)
+        for section in resolved_sections:
+            section_name = _resolve_pattern_section_mix_key(section)
+            bars = max(1, int((section or {}).get("bars") or 1))
+            start_index = min(total_samples, current_bar * samples_per_bar)
+            end_index = min(total_samples, (current_bar + bars) * samples_per_bar)
+            if end_index <= start_index:
+                current_bar += bars
+                continue
+            gain_db = float((role_section_gains.get(resolved_role) or {}).get(section_name, 0.0))
+            width_gain = float((role_section_width.get(resolved_role) or {}).get(section_name, 0.0))
+            gain_db_envelope[start_index:end_index] += gain_db
+            width_envelope[start_index:end_index] += width_gain
+            section_events.append(
+                {
+                    "section_name": section_name,
+                    "song_role": _clean_text((section or {}).get("song_role")).lower() or section_name,
+                    "bars": int(bars),
+                    "gain_db": round(gain_db, 4),
+                    "width_gain": round(width_gain, 4),
+                }
+            )
+            current_bar += bars
+
+        smoothing_samples = max(64, int(round(sample_rate * 0.025)))
+        if total_samples > smoothing_samples:
+            kernel = np.hanning(smoothing_samples).astype(np.float32)
+            kernel_sum = float(np.sum(kernel))
+            if kernel_sum > 0:
+                kernel /= kernel_sum
+                gain_db_envelope = np.convolve(gain_db_envelope, kernel, mode="same").astype(np.float32)
+                width_envelope = np.convolve(width_envelope, kernel, mode="same").astype(np.float32)
+
+        gain_linear = np.power(10.0, np.clip(gain_db_envelope, -1.2, 0.8) / 20.0).astype(np.float32)
+        cached_profile = {
+            "gain_linear": gain_linear,
+            "width_envelope": width_envelope.astype(np.float32),
+            "section_events": section_events,
+            "smoothing_samples": int(smoothing_samples),
+            "max_gain_db": round(float(np.max(gain_db_envelope)) if gain_db_envelope.size else 0.0, 4),
+            "min_gain_db": round(float(np.min(gain_db_envelope)) if gain_db_envelope.size else 0.0, 4),
+            "max_width_gain": round(float(np.max(width_envelope)) if width_envelope.size else 0.0, 4),
+            "min_width_gain": round(float(np.min(width_envelope)) if width_envelope.size else 0.0, 4),
+        }
+        _SECTION_MIX_PROFILE_CACHE[cache_key] = cached_profile
+
+    gain_linear = cached_profile["gain_linear"]
+    width_envelope = cached_profile["width_envelope"]
+    section_events = cached_profile["section_events"]
+    smoothing_samples = int(cached_profile["smoothing_samples"])
+
     if resolved_role in {"melody", "lead", "texture", "chop", "hat", "hihat", "perc", "clap"}:
-        mid = ((layer_render[:, 0] + layer_render[:, 1]) * 0.5).astype(np.float32)
-        side = ((layer_render[:, 0] - layer_render[:, 1]) * 0.5).astype(np.float32)
-        side *= (1.0 + np.clip(width_envelope, -0.12, 0.22))
-        processed = np.stack([mid + side, mid - side], axis=1).astype(np.float32)
+        if float(np.max(np.abs(width_envelope))) > 1e-6:
+            mid = ((layer_render[:, 0] + layer_render[:, 1]) * 0.5).astype(np.float32)
+            side = ((layer_render[:, 0] - layer_render[:, 1]) * 0.5).astype(np.float32)
+            side *= (1.0 + np.clip(width_envelope, -0.12, 0.22))
+            processed = np.stack([mid + side, mid - side], axis=1).astype(np.float32)
+        else:
+            processed = layer_render.copy()
     else:
         processed = layer_render.copy()
     processed *= gain_linear[:, np.newaxis]
@@ -10444,10 +11817,10 @@ def _apply_pattern_layer_section_mix(
         "role": resolved_role,
         "events": section_events,
         "smoothing_samples": int(smoothing_samples),
-        "max_gain_db": round(float(np.max(gain_db_envelope)) if gain_db_envelope.size else 0.0, 4),
-        "min_gain_db": round(float(np.min(gain_db_envelope)) if gain_db_envelope.size else 0.0, 4),
-        "max_width_gain": round(float(np.max(width_envelope)) if width_envelope.size else 0.0, 4),
-        "min_width_gain": round(float(np.min(width_envelope)) if width_envelope.size else 0.0, 4),
+        "max_gain_db": cached_profile["max_gain_db"],
+        "min_gain_db": cached_profile["min_gain_db"],
+        "max_width_gain": cached_profile["max_width_gain"],
+        "min_width_gain": cached_profile["min_width_gain"],
     }
 
 
@@ -10671,6 +12044,1234 @@ def _inject_reverse_transition_swell(
     render[start:boundary] += swell * fade[:, np.newaxis]
     render[start:boundary] = np.clip(render[start:boundary], -1.0, 1.0)
     return True
+
+
+def _apply_pattern_drum_turnarounds(
+    layer_renders: Dict[str, "np.ndarray"],
+    rendered_layers: List[Dict[str, Any]],
+    sections: Optional[Iterable[Dict[str, Any]]],
+    sample_rate: int,
+    tempo_bpm: float,
+) -> Optional[Dict[str, Any]]:
+    resolved_sections = list(sections or [])
+    if np is None or not layer_renders or len(resolved_sections) < 2:
+        return None
+
+    role_by_name = {
+        _clean_text(layer.get("name")): _clean_text(layer.get("role")).lower()
+        for layer in rendered_layers
+        if _clean_text(layer.get("name"))
+    }
+    drum_layer_names = _select_representative_drum_layers(
+        role_by_name=role_by_name,
+        available_layers=[
+            name
+            for name, role in role_by_name.items()
+            if role in {"snare", "clap", "hat", "hihat", "perc", "kick"} and name in layer_renders
+        ],
+    )
+    if not drum_layer_names:
+        return None
+
+    total_samples = max(layer_renders[name].shape[0] for name in drum_layer_names)
+    turnaround_bus = np.zeros((total_samples, 2), dtype=np.float32)
+    samples_per_bar = max(1, int(round((240.0 / float(max(1.0, tempo_bpm))) * sample_rate)))
+    eighth = max(32, int(round(samples_per_bar * 0.125)))
+    sixteenth = max(24, int(round(samples_per_bar * 0.0625)))
+    quarter = max(64, int(round(samples_per_bar * 0.25)))
+    events: List[Dict[str, Any]] = []
+    current_bar = 0
+
+    for section_index, section in enumerate(resolved_sections[:-1]):
+        bars = max(1, int((section or {}).get("bars") or 1))
+        current_bar += bars
+        next_section = resolved_sections[section_index + 1]
+        next_role = _resolve_section_song_role(next_section)
+        previous_role = _resolve_section_song_role(section)
+        if next_role not in {"pre_hook", "hook", "break", "verse"}:
+            continue
+        boundary_index = min(total_samples, current_bar * samples_per_bar)
+        if boundary_index <= 0 or boundary_index >= total_samples:
+            continue
+
+        if next_role == "hook":
+            fill_length = quarter
+            stutter_repeats = 4
+            layer_gain_map = {"hat": 0.92, "hihat": 0.92, "perc": 0.76, "snare": 0.82, "clap": 0.78, "kick": 0.34}
+            room_duck_roles = {"hat", "hihat", "perc"}
+            transition_type = "hook_turnaround"
+        elif next_role == "pre_hook":
+            fill_length = max(eighth + sixteenth, int(round(quarter * 0.7)))
+            stutter_repeats = 3
+            layer_gain_map = {"hat": 0.84, "hihat": 0.84, "perc": 0.68, "snare": 0.7, "clap": 0.62, "kick": 0.18}
+            room_duck_roles = {"hat", "hihat"}
+            transition_type = "pre_hook_pickup_fill"
+        elif next_role == "break":
+            fill_length = max(eighth, int(round(quarter * 0.55)))
+            stutter_repeats = 2
+            layer_gain_map = {"hat": 0.58, "hihat": 0.58, "perc": 0.44, "snare": 0.78, "clap": 0.64, "kick": 0.22}
+            room_duck_roles = {"hat", "hihat", "perc", "kick"}
+            transition_type = "break_turnaround"
+        else:
+            fill_length = max(eighth, int(round(quarter * 0.5)))
+            stutter_repeats = 2
+            layer_gain_map = {"hat": 0.52, "hihat": 0.52, "perc": 0.34, "snare": 0.46, "clap": 0.38, "kick": 0.0}
+            room_duck_roles = {"hat", "hihat"}
+            transition_type = "verse_turnaround"
+
+        start_index = max(0, boundary_index - fill_length)
+        if start_index >= boundary_index:
+            continue
+        affected_layers: List[str] = []
+
+        for layer_name in drum_layer_names:
+            render = layer_renders.get(layer_name)
+            if render is None or render.size == 0:
+                continue
+            role_name = role_by_name.get(layer_name, "")
+            layer_gain = float(layer_gain_map.get(role_name, 0.0))
+            if layer_gain <= 0.0:
+                continue
+            source_start = max(0, boundary_index - max(fill_length, eighth))
+            source = render[source_start:boundary_index].copy()
+            if source.shape[0] < 16 or float(np.max(np.abs(source))) < 0.01:
+                continue
+
+            if role_name in {"hat", "hihat"}:
+                snippet = _build_chop_stutter(
+                    source,
+                    repeats=stutter_repeats,
+                    slice_ratio=0.16 if next_role == "hook" else 0.2,
+                    spacing_ratio=0.15 if next_role == "hook" else 0.18,
+                )
+            elif role_name == "perc":
+                snippet = _build_chop_stutter(
+                    source,
+                    repeats=max(2, stutter_repeats - 1),
+                    slice_ratio=0.24,
+                    spacing_ratio=0.22,
+                )
+            elif role_name in {"snare", "clap"}:
+                snippet = _build_chop_stutter(
+                    source,
+                    repeats=max(2, stutter_repeats - (0 if next_role == "hook" else 1)),
+                    slice_ratio=0.26,
+                    spacing_ratio=0.24,
+                )
+                snippet = _gate_audio_tail(snippet, active_ratio=0.82 if next_role == "hook" else 0.74, floor_gain=0.0)
+            else:
+                snippet = _gate_audio_tail(source, active_ratio=0.54, floor_gain=0.0)
+
+            snippet = _resize_audio_to_length(snippet, boundary_index - start_index)
+            fade = np.linspace(0.72, 1.0 if next_role == "hook" else 0.92, snippet.shape[0], dtype=np.float32)
+            snippet *= fade[:, np.newaxis] * layer_gain
+            turnaround_bus[start_index:boundary_index] += snippet
+            if role_name in room_duck_roles:
+                _apply_constant_gain_segment(render, start_index, boundary_index, 0.84 if next_role == "hook" else 0.8 if next_role == "pre_hook" else 0.76)
+            affected_layers.append(layer_name)
+
+        if affected_layers:
+            events.append(
+                {
+                    "boundary_bar": int(current_bar),
+                    "boundary_seconds": round(float(boundary_index / float(sample_rate)), 4),
+                    "from_role": previous_role,
+                    "to_role": next_role,
+                    "transition_type": transition_type,
+                    "fill_length_seconds": round(float((boundary_index - start_index) / float(sample_rate)), 4),
+                    "affected_layers": affected_layers[:16],
+                    "affected_layers_count": len(affected_layers),
+                }
+            )
+
+    if not events or not np.any(np.abs(turnaround_bus) > 1e-7):
+        return None
+
+    turnaround_bus = np.tanh(turnaround_bus * 1.08).astype(np.float32)
+    turnaround_bus = np.clip(turnaround_bus, -0.42, 0.42).astype(np.float32)
+    layer_name = "drum-turnaround-bus"
+    layer_renders[layer_name] = turnaround_bus
+    rendered_layers.append(
+        {
+            "name": layer_name,
+            "role": "drum_fill",
+            "pattern": None,
+            "trigger_positions": [],
+            "source_path": None,
+            "copied_input_path": None,
+            "render_mode": "drum_turnarounds",
+        }
+    )
+
+    return {
+        "mode": "drum_turnarounds",
+        "profile": "boombap_drum_turnarounds_v1",
+        "bus_layer_name": layer_name,
+        "selected_layers": drum_layer_names,
+        "events": events,
+        "events_count": len(events),
+        "turnaround_peak": round(float(np.max(np.abs(turnaround_bus))) if turnaround_bus.size else 0.0, 6),
+    }
+
+
+def _apply_pattern_drum_section_evolution(
+    layer_renders: Dict[str, "np.ndarray"],
+    rendered_layers: List[Dict[str, Any]],
+    sections: Optional[Iterable[Dict[str, Any]]],
+    sample_rate: int,
+    tempo_bpm: float,
+) -> Optional[Dict[str, Any]]:
+    resolved_sections = list(sections or [])
+    if np is None or not layer_renders or not resolved_sections:
+        return None
+
+    role_by_name = {
+        _clean_text(layer.get("name")): _clean_text(layer.get("role")).lower()
+        for layer in rendered_layers
+        if _clean_text(layer.get("name"))
+    }
+    evolving_roles = {"kick", "snare", "clap", "hat", "hihat", "perc", "drum_bed"}
+    evolving_layers = [name for name, role in role_by_name.items() if role in evolving_roles and name in layer_renders]
+    if not evolving_layers:
+        return None
+
+    total_samples = max(layer_renders[name].shape[0] for name in evolving_layers)
+    samples_per_bar = max(1, int(round((240.0 / float(max(1.0, tempo_bpm))) * sample_rate)))
+    quarter = max(64, int(round(samples_per_bar * 0.25)))
+    eighth = max(32, int(round(samples_per_bar * 0.125)))
+    sixteenth = max(16, int(round(samples_per_bar * 0.0625)))
+    variation_bus = np.zeros((total_samples, 2), dtype=np.float32)
+    processed_layers = 0
+    bar_events: List[Dict[str, Any]] = []
+    current_bar = 0
+
+    def _bar_profile(section_role: str, phase: int) -> Dict[str, Dict[str, float]]:
+        normalized_section = _clean_text(section_role).lower() or "verse"
+        if normalized_section == "hook":
+            if phase % 2 == 0:
+                return {
+                    "hat": {"gain": 1.04, "width": 1.08},
+                    "hihat": {"gain": 1.04, "width": 1.08},
+                    "perc": {"gain": 1.06, "width": 1.1},
+                    "snare": {"gain": 1.03},
+                    "clap": {"gain": 1.04, "width": 1.06},
+                    "kick": {"gain": 1.02},
+                    "drum_bed": {"gain": 1.03, "width": 1.03},
+                }
+            return {
+                "hat": {"gain": 0.97, "width": 1.04},
+                "hihat": {"gain": 0.97, "width": 1.04},
+                "perc": {"gain": 1.02, "width": 1.06},
+                "snare": {"gain": 1.05},
+                "clap": {"gain": 1.06, "width": 1.08},
+                "kick": {"gain": 1.0},
+                "drum_bed": {"gain": 1.01, "width": 1.02},
+            }
+        if normalized_section == "pre_hook":
+            return {
+                "hat": {"gain": 1.05 if phase >= 1 else 0.98, "width": 1.08},
+                "hihat": {"gain": 1.05 if phase >= 1 else 0.98, "width": 1.08},
+                "perc": {"gain": 1.08, "width": 1.1},
+                "snare": {"gain": 1.02},
+                "clap": {"gain": 1.03, "width": 1.05},
+                "kick": {"gain": 1.01},
+                "drum_bed": {"gain": 1.02, "width": 1.02},
+            }
+        if normalized_section == "break":
+            return {
+                "hat": {"gain": 0.82, "width": 0.96},
+                "hihat": {"gain": 0.82, "width": 0.96},
+                "perc": {"gain": 0.84, "width": 0.98},
+                "snare": {"gain": 0.94},
+                "clap": {"gain": 0.9, "width": 0.98},
+                "kick": {"gain": 0.92},
+                "drum_bed": {"gain": 0.88, "width": 0.98},
+            }
+        if normalized_section == "outro":
+            return {
+                "hat": {"gain": 0.9, "width": 0.98},
+                "hihat": {"gain": 0.9, "width": 0.98},
+                "perc": {"gain": 0.92, "width": 1.0},
+                "snare": {"gain": 0.96},
+                "clap": {"gain": 0.94, "width": 1.0},
+                "kick": {"gain": 0.95},
+                "drum_bed": {"gain": 0.94, "width": 1.0},
+            }
+        verse_cycle = [
+            {
+                "hat": {"gain": 0.96, "width": 1.0},
+                "hihat": {"gain": 0.96, "width": 1.0},
+                "perc": {"gain": 0.94, "width": 1.0},
+                "snare": {"gain": 1.0},
+                "clap": {"gain": 0.98, "width": 1.0},
+                "kick": {"gain": 1.01},
+                "drum_bed": {"gain": 0.98, "width": 1.0},
+            },
+            {
+                "hat": {"gain": 1.02, "width": 1.06},
+                "hihat": {"gain": 1.02, "width": 1.06},
+                "perc": {"gain": 1.04, "width": 1.08},
+                "snare": {"gain": 0.99},
+                "clap": {"gain": 1.0, "width": 1.03},
+                "kick": {"gain": 1.0},
+                "drum_bed": {"gain": 1.0, "width": 1.02},
+            },
+            {
+                "hat": {"gain": 0.94, "width": 0.98},
+                "hihat": {"gain": 0.94, "width": 0.98},
+                "perc": {"gain": 0.98, "width": 1.02},
+                "snare": {"gain": 1.03},
+                "clap": {"gain": 1.04, "width": 1.04},
+                "kick": {"gain": 1.0},
+                "drum_bed": {"gain": 0.98, "width": 1.0},
+            },
+            {
+                "hat": {"gain": 1.06, "width": 1.1},
+                "hihat": {"gain": 1.06, "width": 1.1},
+                "perc": {"gain": 1.08, "width": 1.12},
+                "snare": {"gain": 1.04},
+                "clap": {"gain": 1.05, "width": 1.06},
+                "kick": {"gain": 1.02},
+                "drum_bed": {"gain": 1.03, "width": 1.03},
+            },
+        ]
+        return verse_cycle[phase % len(verse_cycle)]
+
+    def _apply_width(render: "np.ndarray", width: float) -> "np.ndarray":
+        if abs(width - 1.0) < 1e-4:
+            return render
+        mid = ((render[:, 0] + render[:, 1]) * 0.5).astype(np.float32)
+        side = ((render[:, 0] - render[:, 1]) * 0.5).astype(np.float32) * float(width)
+        return np.stack([mid + side, mid - side], axis=1).astype(np.float32)
+
+    for section in resolved_sections:
+        section_role = _resolve_section_song_role(section)
+        bars = max(1, int((section or {}).get("bars") or 1))
+        if bars <= 0:
+            continue
+        for section_bar_index in range(bars):
+            bar_phase = int(section_bar_index) % (2 if section_role == "hook" else 4)
+            bar_start = min(total_samples, (current_bar + section_bar_index) * samples_per_bar)
+            bar_end = min(total_samples, bar_start + samples_per_bar)
+            if bar_end <= bar_start:
+                continue
+            profile = _bar_profile(section_role, bar_phase)
+            for layer_name in evolving_layers:
+                render = layer_renders.get(layer_name)
+                if render is None or render.size == 0 or bar_start >= render.shape[0]:
+                    continue
+                role_name = role_by_name.get(layer_name, "")
+                segment_end = min(bar_end, render.shape[0])
+                if segment_end <= bar_start:
+                    continue
+                role_profile = profile.get(role_name) or {}
+                gain = float(role_profile.get("gain", 1.0))
+                width = float(role_profile.get("width", 1.0))
+                if abs(gain - 1.0) > 1e-4:
+                    _apply_constant_gain_segment(render, bar_start, segment_end, gain)
+                if abs(width - 1.0) > 1e-4 and role_name in {"hat", "hihat", "perc", "clap", "drum_bed"}:
+                    render[bar_start:segment_end] = _apply_width(render[bar_start:segment_end].copy(), width)
+                processed_layers += 1
+
+            should_add_pickup = False
+            if section_role == "hook" and bar_phase == 1:
+                should_add_pickup = True
+            elif section_role in {"verse", "pre_hook"} and bar_phase == 3:
+                should_add_pickup = True
+            if should_add_pickup:
+                pickup_start = max(bar_start, bar_end - quarter)
+                pickup_center = max(bar_start, bar_end - eighth)
+                pickup_layers: List[str] = []
+                for layer_name in evolving_layers:
+                    render = layer_renders.get(layer_name)
+                    if render is None or render.size == 0 or pickup_start >= render.shape[0]:
+                        continue
+                    role_name = role_by_name.get(layer_name, "")
+                    if role_name not in {"hat", "hihat", "perc", "snare", "clap"}:
+                        continue
+                    source_end = min(bar_end, render.shape[0])
+                    source = render[pickup_start:source_end].copy()
+                    if source.shape[0] < 16 or float(np.max(np.abs(source))) < 0.008:
+                        continue
+                    if role_name in {"hat", "hihat"}:
+                        snippet = _build_chop_stutter(
+                            source,
+                            repeats=3 if section_role == "hook" else 2,
+                            slice_ratio=0.18 if section_role == "hook" else 0.22,
+                            spacing_ratio=0.16 if section_role == "hook" else 0.2,
+                        )
+                        gain = 0.34 if section_role == "hook" else 0.24
+                    elif role_name == "perc":
+                        snippet = _build_chop_stutter(source, repeats=2, slice_ratio=0.24, spacing_ratio=0.22)
+                        gain = 0.26 if section_role == "hook" else 0.18
+                    else:
+                        snippet = _build_chop_stutter(source, repeats=2, slice_ratio=0.28, spacing_ratio=0.24)
+                        snippet = _gate_audio_tail(snippet, active_ratio=0.76, floor_gain=0.0)
+                        gain = 0.22 if section_role == "hook" else 0.16
+                    target_end = min(total_samples, pickup_start + snippet.shape[0])
+                    if target_end <= pickup_start:
+                        continue
+                    faded = snippet[: target_end - pickup_start] * np.linspace(0.72, 1.0, target_end - pickup_start, dtype=np.float32)[:, np.newaxis]
+                    variation_bus[pickup_start:target_end] += faded * gain
+                    if role_name in {"hat", "hihat"}:
+                        _apply_constant_gain_segment(render, pickup_start, min(render.shape[0], bar_end), 0.86 if section_role == "hook" else 0.9)
+                    pickup_layers.append(layer_name)
+                if pickup_layers:
+                    bar_events.append(
+                        {
+                            "section_role": section_role,
+                            "bar_index": int(current_bar + section_bar_index),
+                            "bar_phase": int(bar_phase),
+                            "event_type": "pickup_variation",
+                            "pickup_center_seconds": round(float(pickup_center / float(sample_rate)), 4),
+                            "layers": pickup_layers[:12],
+                            "layers_count": len(pickup_layers),
+                        }
+                    )
+        current_bar += bars
+
+    if np.any(np.abs(variation_bus) > 1e-7):
+        variation_bus = np.tanh(variation_bus * 1.06).astype(np.float32)
+        variation_bus = np.clip(variation_bus, -0.32, 0.32).astype(np.float32)
+        layer_name = "drum-evolution-bus"
+        layer_renders[layer_name] = variation_bus
+        rendered_layers.append(
+            {
+                "name": layer_name,
+                "role": "drum_variation",
+                "pattern": None,
+                "trigger_positions": [],
+                "source_path": None,
+                "copied_input_path": None,
+                "render_mode": "drum_section_evolution",
+            }
+        )
+    else:
+        layer_name = ""
+
+    if processed_layers <= 0 and not layer_name:
+        return None
+
+    return {
+        "mode": "drum_section_evolution",
+        "profile": "boombap_drum_section_evolution_v1",
+        "bus_layer_name": layer_name or None,
+        "processed_layers_count": int(processed_layers),
+        "events": bar_events,
+        "events_count": len(bar_events),
+        "variation_peak": round(float(np.max(np.abs(variation_bus))) if variation_bus.size else 0.0, 6),
+    }
+
+
+def _apply_pattern_drum_kit_character(
+    layer_renders: Dict[str, "np.ndarray"],
+    rendered_layers: List[Dict[str, Any]],
+    sections: Optional[Iterable[Dict[str, Any]]],
+    sample_rate: int,
+    tempo_bpm: float,
+) -> Optional[Dict[str, Any]]:
+    resolved_sections = list(sections or [])
+    if np is None or signal is None or not layer_renders or not resolved_sections:
+        return None
+
+    role_by_name = {
+        _clean_text(layer.get("name")): _clean_text(layer.get("role")).lower()
+        for layer in rendered_layers
+        if _clean_text(layer.get("name"))
+    }
+    drum_roles = {"kick", "snare", "clap", "hat", "hihat", "perc", "drum_bed", "drum_fill", "drum_variation"}
+    drum_layers = _select_drum_character_layers(
+        role_by_name=role_by_name,
+        available_layers=[name for name, role in role_by_name.items() if role in drum_roles and name in layer_renders],
+    )
+    if not drum_layers:
+        return None
+
+    total_samples = max(layer_renders[name].shape[0] for name in drum_layers)
+    samples_per_bar = max(1, int(round((240.0 / float(max(1.0, tempo_bpm))) * sample_rate)))
+    smoothing_samples = max(128, int(round(sample_rate * 0.035)))
+    nyquist_hz = sample_rate * 0.5
+
+    thump_env = np.zeros(total_samples, dtype=np.float32)
+    snap_env = np.zeros(total_samples, dtype=np.float32)
+    air_env = np.zeros(total_samples, dtype=np.float32)
+    width_env = np.zeros(total_samples, dtype=np.float32)
+    crunch_env = np.zeros(total_samples, dtype=np.float32)
+    section_events: List[Dict[str, Any]] = []
+
+    section_profile_map = {
+        "intro": {"thump": 0.012, "snap": 0.006, "air": -0.004, "width": 0.0, "crunch": 0.01},
+        "verse": {"thump": 0.02, "snap": 0.01, "air": -0.01, "width": -0.01, "crunch": 0.016},
+        "pre_hook": {"thump": 0.016, "snap": 0.02, "air": 0.008, "width": 0.04, "crunch": 0.022},
+        "hook": {"thump": 0.028, "snap": 0.028, "air": 0.015, "width": 0.08, "crunch": 0.032},
+        "break": {"thump": -0.008, "snap": -0.006, "air": -0.01, "width": -0.02, "crunch": 0.008},
+        "outro": {"thump": 0.006, "snap": 0.002, "air": -0.006, "width": 0.0, "crunch": 0.01},
+    }
+
+    current_bar = 0
+    for section in resolved_sections:
+        section_name = _resolve_pattern_section_mix_key(section)
+        bars = max(1, int((section or {}).get("bars") or 1))
+        start_index = min(total_samples, current_bar * samples_per_bar)
+        end_index = min(total_samples, (current_bar + bars) * samples_per_bar)
+        current_bar += bars
+        if end_index <= start_index:
+            continue
+        energy = float((section or {}).get("energy") or 0.92)
+        drum_density = float((section or {}).get("drum_density") or 0.92)
+        profile = dict(section_profile_map.get(section_name) or section_profile_map["verse"])
+        profile["thump"] += (drum_density - 0.92) * 0.014
+        profile["snap"] += (energy - 0.92) * 0.024
+        profile["air"] += (energy - 0.92) * 0.018
+        profile["width"] += (drum_density - 0.92) * 0.06
+        profile["crunch"] += (drum_density - 0.92) * 0.022
+
+        thump_env[start_index:end_index] = float(profile["thump"])
+        snap_env[start_index:end_index] = float(profile["snap"])
+        air_env[start_index:end_index] = float(profile["air"])
+        width_env[start_index:end_index] = float(profile["width"])
+        crunch_env[start_index:end_index] = float(profile["crunch"])
+        section_events.append(
+            {
+                "section_name": section_name,
+                "bars": int(bars),
+                "thump": round(float(profile["thump"]), 4),
+                "snap": round(float(profile["snap"]), 4),
+                "air": round(float(profile["air"]), 4),
+                "width": round(float(profile["width"]), 4),
+                "crunch": round(float(profile["crunch"]), 4),
+            }
+        )
+
+    def _smooth(values: "np.ndarray") -> "np.ndarray":
+        if values.size <= smoothing_samples:
+            return values.astype(np.float32)
+        kernel = np.hanning(smoothing_samples).astype(np.float32)
+        kernel_sum = float(np.sum(kernel))
+        if kernel_sum <= 0:
+            return values.astype(np.float32)
+        kernel /= kernel_sum
+        return np.convolve(values, kernel, mode="same").astype(np.float32)
+
+    thump_env = _smooth(thump_env)
+    snap_env = _smooth(snap_env)
+    air_env = _smooth(air_env)
+    width_env = _smooth(width_env)
+    crunch_env = _smooth(crunch_env)
+
+    def _bandpass(low_hz: float, high_hz: float) -> Optional[Any]:
+        low = max(40.0, float(low_hz))
+        high = min(float(high_hz), nyquist_hz * 0.92)
+        if high <= low + 60.0:
+            return None
+        return signal.butter(2, [low, high], btype="bandpass", fs=sample_rate, output="sos")
+
+    kick_low_sos = _bandpass(46.0, 150.0)
+    kick_click_sos = _bandpass(1600.0, 4200.0)
+    snare_body_sos = _bandpass(180.0, 920.0)
+    snare_snap_sos = _bandpass(1600.0, 5600.0)
+    hat_air_sos = _bandpass(4600.0, 9800.0)
+    perc_air_sos = _bandpass(2600.0, 8200.0)
+    bed_body_sos = _bandpass(140.0, 880.0)
+    bed_air_sos = _bandpass(3200.0, 8400.0)
+
+    processed_layers = 0
+    touched_roles: Dict[str, int] = {}
+    character_bus = np.zeros((total_samples, 2), dtype=np.float32)
+
+    def _apply_width(render: "np.ndarray", width: "np.ndarray") -> "np.ndarray":
+        mid = ((render[:, 0] + render[:, 1]) * 0.5).astype(np.float32)
+        side = ((render[:, 0] - render[:, 1]) * 0.5).astype(np.float32)
+        side *= (1.0 + width[: side.shape[0]])
+        return np.stack([mid + side, mid - side], axis=1).astype(np.float32)
+
+    def _apply_mono_band_mix(
+        render: "np.ndarray",
+        primary_sos: Optional[Any],
+        primary_gain: "np.ndarray",
+        secondary_sos: Optional[Any] = None,
+        secondary_gain: Optional["np.ndarray"] = None,
+        dry_mix_gain: Optional["np.ndarray"] = None,
+    ) -> "np.ndarray":
+        processed = render.copy()
+        mono = np.mean(processed, axis=1).astype(np.float32)
+        adjustment = np.zeros(mono.shape[0], dtype=np.float32)
+        if primary_sos is not None:
+            adjustment += signal.sosfiltfilt(primary_sos, mono).astype(np.float32) * primary_gain[: mono.shape[0]]
+        if secondary_sos is not None and secondary_gain is not None:
+            adjustment += signal.sosfiltfilt(secondary_sos, mono).astype(np.float32) * secondary_gain[: mono.shape[0]]
+        if dry_mix_gain is not None:
+            adjustment += mono * dry_mix_gain[: mono.shape[0]]
+        processed[:, 0] += adjustment
+        processed[:, 1] += adjustment
+        return processed.astype(np.float32)
+
+    for layer_name in drum_layers:
+        render = layer_renders.get(layer_name)
+        if render is None or render.size == 0:
+            continue
+        role = role_by_name.get(layer_name, "")
+        processed = render.copy()
+        usable_thump = thump_env[: render.shape[0]]
+        usable_snap = snap_env[: render.shape[0]]
+        usable_air = air_env[: render.shape[0]]
+        usable_width = width_env[: render.shape[0]]
+        usable_crunch = crunch_env[: render.shape[0]]
+
+        if role == "kick" and kick_low_sos is not None and kick_click_sos is not None:
+            processed = _apply_mono_band_mix(
+                render,
+                kick_low_sos,
+                usable_thump * 1.22,
+                kick_click_sos,
+                usable_snap * 0.42,
+            )
+        elif role in {"snare", "clap", "drum_fill"} and snare_body_sos is not None and snare_snap_sos is not None:
+            processed = _apply_mono_band_mix(
+                render,
+                snare_body_sos,
+                usable_thump * 0.48,
+                snare_snap_sos,
+                usable_snap * 1.04,
+            )
+            processed = _apply_width(processed, usable_width * 0.7)
+        elif role in {"hat", "hihat"} and hat_air_sos is not None:
+            processed = _apply_mono_band_mix(render, hat_air_sos, usable_air * 1.18)
+            processed = _apply_width(processed, usable_width * 0.9)
+        elif role == "perc" and perc_air_sos is not None:
+            processed = _apply_mono_band_mix(
+                render,
+                perc_air_sos,
+                usable_air * 0.82,
+                dry_mix_gain=usable_snap * 0.05,
+            )
+            processed = _apply_width(processed, usable_width * 0.82)
+        elif role == "drum_variation":
+            processed *= (1.0 + (usable_snap * 0.04))[:, np.newaxis]
+            processed = _apply_width(processed, usable_width * 0.7)
+        elif role == "drum_bed" and bed_body_sos is not None and bed_air_sos is not None:
+            processed = _apply_mono_band_mix(
+                render,
+                bed_body_sos,
+                usable_thump * 0.32,
+                bed_air_sos,
+                usable_air * 0.54,
+            )
+            processed = _apply_width(processed, usable_width * 0.55)
+
+        drive = 1.0 + np.clip(usable_crunch, 0.0, 0.08)
+        processed = np.tanh(processed * drive[:, np.newaxis]).astype(np.float32)
+        layer_renders[layer_name] = np.clip(processed, -1.0, 1.0)
+        character_bus[: processed.shape[0]] += processed * ((usable_crunch[:, np.newaxis] * 0.18) + 0.01)
+        processed_layers += 1
+        touched_roles[role] = int(touched_roles.get(role, 0)) + 1
+
+    if processed_layers <= 0:
+        return None
+
+    character_bus = np.tanh(character_bus * 1.08).astype(np.float32)
+    character_bus = np.clip(character_bus, -0.24, 0.24).astype(np.float32)
+    bus_layer_name = "drum-kit-character-bus"
+    layer_renders[bus_layer_name] = character_bus
+    rendered_layers.append(
+        {
+            "name": bus_layer_name,
+            "role": "drum_character",
+            "pattern": None,
+            "trigger_positions": [],
+            "source_path": None,
+            "copied_input_path": None,
+            "render_mode": "drum_kit_character",
+        }
+    )
+
+    return {
+        "mode": "drum_kit_character",
+        "profile": "boombap_drum_kit_character_v1",
+        "bus_layer_name": bus_layer_name,
+        "selected_layers": drum_layers,
+        "processed_layers_count": int(processed_layers),
+        "touched_roles": touched_roles,
+        "events": section_events,
+        "events_count": len(section_events),
+        "character_bus_peak": round(float(np.max(np.abs(character_bus))) if character_bus.size else 0.0, 6),
+    }
+
+
+def _apply_pattern_sample_stack_groove_response(
+    layer_renders: Dict[str, "np.ndarray"],
+    rendered_layers: List[Dict[str, Any]],
+    sample_rate: int,
+) -> Optional[Dict[str, Any]]:
+    if np is None or signal is None or not layer_renders:
+        return None
+
+    role_by_name = {
+        _clean_text(layer.get("name")): _clean_text(layer.get("role")).lower()
+        for layer in rendered_layers
+        if _clean_text(layer.get("name"))
+    }
+    available_layers = [name for name, role in role_by_name.items() if role in {"melody", "lead", "chop", "texture", "resample", "tonal_glue"} and name in layer_renders]
+    sample_layers: List[str] = []
+    seen_layers: Set[str] = set()
+
+    def _add_first(predicate: Any) -> None:
+        if len(sample_layers) >= 3:
+            return
+        for layer_name in available_layers:
+            if layer_name in seen_layers:
+                continue
+            if predicate(layer_name):
+                sample_layers.append(layer_name)
+                seen_layers.add(layer_name)
+                return
+
+    _add_first(lambda name: role_by_name.get(name) in {"melody", "lead"})
+    _add_first(lambda name: role_by_name.get(name) == "chop" and "hook" in _clean_text(name).lower())
+    _add_first(lambda name: role_by_name.get(name) == "chop")
+    _add_first(lambda name: role_by_name.get(name) == "texture")
+    _add_first(lambda name: role_by_name.get(name) == "resample")
+    _add_first(lambda name: role_by_name.get(name) == "tonal_glue")
+    if not sample_layers:
+        return None
+
+    kick_events: List[Dict[str, Any]] = []
+    backbeat_events: List[Dict[str, Any]] = []
+    for layer_manifest in rendered_layers:
+        role_name = _clean_text(layer_manifest.get("role")).lower()
+        triggers = list(layer_manifest.get("trigger_positions") or [])
+        if role_name == "kick":
+            kick_events.extend(triggers)
+        elif role_name in {"snare", "clap"}:
+            backbeat_events.extend(triggers)
+
+    if not kick_events and not backbeat_events:
+        return None
+
+    total_samples = max(layer_renders[name].shape[0] for name in sample_layers)
+    kick_duck_env = np.zeros(total_samples, dtype=np.float32)
+    backbeat_push_env = np.zeros(total_samples, dtype=np.float32)
+    backbeat_width_env = np.zeros(total_samples, dtype=np.float32)
+
+    kick_hold_ms = {
+        "intro": 28.0,
+        "verse": 38.0,
+        "pre_hook": 34.0,
+        "hook": 42.0,
+        "break": 24.0,
+        "outro": 28.0,
+    }
+    kick_release_ms = {
+        "intro": 74.0,
+        "verse": 92.0,
+        "pre_hook": 82.0,
+        "hook": 98.0,
+        "break": 62.0,
+        "outro": 76.0,
+    }
+    kick_amount = {
+        "intro": 0.08,
+        "verse": 0.12,
+        "pre_hook": 0.1,
+        "hook": 0.11,
+        "break": 0.06,
+        "outro": 0.07,
+    }
+    backbeat_attack_ms = {
+        "intro": 10.0,
+        "verse": 12.0,
+        "pre_hook": 9.0,
+        "hook": 8.0,
+        "break": 8.0,
+        "outro": 10.0,
+    }
+    backbeat_hold_ms = {
+        "intro": 26.0,
+        "verse": 32.0,
+        "pre_hook": 38.0,
+        "hook": 44.0,
+        "break": 22.0,
+        "outro": 24.0,
+    }
+    backbeat_release_ms = {
+        "intro": 72.0,
+        "verse": 88.0,
+        "pre_hook": 102.0,
+        "hook": 116.0,
+        "break": 58.0,
+        "outro": 70.0,
+    }
+    backbeat_amount = {
+        "intro": 0.04,
+        "verse": 0.07,
+        "pre_hook": 0.11,
+        "hook": 0.14,
+        "break": 0.03,
+        "outro": 0.04,
+    }
+    backbeat_width = {
+        "intro": 0.01,
+        "verse": 0.03,
+        "pre_hook": 0.06,
+        "hook": 0.09,
+        "break": 0.0,
+        "outro": 0.01,
+    }
+
+    def _apply_peak_env(buffer: "np.ndarray", start_index: int, attack_samples: int, hold_samples: int, release_samples: int, peak_value: float) -> None:
+        if start_index < 0 or start_index >= buffer.shape[0]:
+            return
+        attack_start = max(0, start_index - attack_samples)
+        if start_index > attack_start:
+            attack_curve = np.linspace(0.0, float(peak_value), start_index - attack_start, dtype=np.float32)
+            buffer[attack_start:start_index] = np.maximum(buffer[attack_start:start_index], attack_curve)
+        hold_end = min(buffer.shape[0], start_index + hold_samples)
+        buffer[start_index:hold_end] = np.maximum(buffer[start_index:hold_end], float(peak_value))
+        release_end = min(buffer.shape[0], hold_end + release_samples)
+        if release_end > hold_end:
+            release_curve = np.linspace(float(peak_value), 0.0, release_end - hold_end, dtype=np.float32)
+            buffer[hold_end:release_end] = np.maximum(buffer[hold_end:release_end], release_curve)
+
+    for event in kick_events:
+        start_seconds = float(event.get("start_seconds") or 0.0)
+        section_name = _clean_text(event.get("song_role") or event.get("section_name")).lower() or "verse"
+        start_index = max(0, min(total_samples - 1, int(round(start_seconds * sample_rate))))
+        _apply_peak_env(
+            kick_duck_env,
+            start_index=start_index,
+            attack_samples=max(8, int(round(sample_rate * 0.0035))),
+            hold_samples=max(12, int(round((kick_hold_ms.get(section_name, 38.0) / 1000.0) * sample_rate))),
+            release_samples=max(16, int(round((kick_release_ms.get(section_name, 92.0) / 1000.0) * sample_rate))),
+            peak_value=float(kick_amount.get(section_name, 0.1)),
+        )
+
+    for event in backbeat_events:
+        start_seconds = float(event.get("start_seconds") or 0.0)
+        section_name = _clean_text(event.get("song_role") or event.get("section_name")).lower() or "verse"
+        start_index = max(0, min(total_samples - 1, int(round(start_seconds * sample_rate))))
+        attack_samples = max(8, int(round((backbeat_attack_ms.get(section_name, 10.0) / 1000.0) * sample_rate)))
+        hold_samples = max(12, int(round((backbeat_hold_ms.get(section_name, 32.0) / 1000.0) * sample_rate)))
+        release_samples = max(16, int(round((backbeat_release_ms.get(section_name, 88.0) / 1000.0) * sample_rate)))
+        _apply_peak_env(
+            backbeat_push_env,
+            start_index=start_index,
+            attack_samples=attack_samples,
+            hold_samples=hold_samples,
+            release_samples=release_samples,
+            peak_value=float(backbeat_amount.get(section_name, 0.08)),
+        )
+        _apply_peak_env(
+            backbeat_width_env,
+            start_index=start_index,
+            attack_samples=attack_samples,
+            hold_samples=hold_samples,
+            release_samples=release_samples,
+            peak_value=float(backbeat_width.get(section_name, 0.03)),
+        )
+
+    smoothing_samples = max(32, int(round(sample_rate * 0.01)))
+    if total_samples > smoothing_samples:
+        kernel = np.hanning(smoothing_samples).astype(np.float32)
+        kernel_sum = float(np.sum(kernel))
+        if kernel_sum > 0:
+            kernel /= kernel_sum
+            kick_duck_env = np.convolve(kick_duck_env, kernel, mode="same").astype(np.float32)
+            backbeat_push_env = np.convolve(backbeat_push_env, kernel, mode="same").astype(np.float32)
+            backbeat_width_env = np.convolve(backbeat_width_env, kernel, mode="same").astype(np.float32)
+
+    nyquist_hz = sample_rate * 0.5
+
+    def _bandpass(low_hz: float, high_hz: float) -> Optional[Any]:
+        low = max(40.0, float(low_hz))
+        high = min(float(high_hz), nyquist_hz * 0.92)
+        if high <= low + 60.0:
+            return None
+        return signal.butter(2, [low, high], btype="bandpass", fs=sample_rate, output="sos")
+
+    body_sos = _bandpass(180.0, 760.0)
+    presence_sos = _bandpass(1500.0, 4600.0)
+    air_sos = _bandpass(4200.0, 8600.0)
+
+    processed_layers = 0
+    touched_roles: Dict[str, int] = {}
+    groove_bus = np.zeros((total_samples, 2), dtype=np.float32)
+
+    def _apply_width(render: "np.ndarray", width_env: "np.ndarray") -> "np.ndarray":
+        mid = ((render[:, 0] + render[:, 1]) * 0.5).astype(np.float32)
+        side = ((render[:, 0] - render[:, 1]) * 0.5).astype(np.float32)
+        side *= (1.0 + width_env[: side.shape[0]])
+        return np.stack([mid + side, mid - side], axis=1).astype(np.float32)
+
+    for layer_name in sample_layers:
+        render = layer_renders.get(layer_name)
+        if render is None or render.size == 0:
+            continue
+        role = role_by_name.get(layer_name, "")
+        usable_kick = kick_duck_env[: render.shape[0]]
+        usable_backbeat = backbeat_push_env[: render.shape[0]]
+        usable_width = backbeat_width_env[: render.shape[0]]
+        processed = render.copy()
+
+        kick_duck_strength = 0.0
+        backbeat_push_strength = 0.0
+        air_push_strength = 0.0
+        width_strength = 0.0
+        if role in {"chop", "resample", "hook_memory"}:
+            kick_duck_strength = 1.0
+            backbeat_push_strength = 1.0
+            air_push_strength = 0.85
+            width_strength = 1.0
+        elif role in {"melody", "lead"}:
+            kick_duck_strength = 0.72
+            backbeat_push_strength = 0.8
+            air_push_strength = 0.0
+            width_strength = 0.42
+        elif role == "texture":
+            kick_duck_strength = 0.92
+            backbeat_push_strength = 0.42
+            air_push_strength = 0.6
+            width_strength = 0.75
+        elif role == "tonal_glue":
+            kick_duck_strength = 0.86
+            backbeat_push_strength = 0.68
+            air_push_strength = 0.72
+            width_strength = 0.82
+
+        gain = (1.0 - (usable_kick * (0.16 * kick_duck_strength))) + (usable_backbeat * (0.06 * backbeat_push_strength))
+        gain = np.clip(gain, 0.72, 1.08).astype(np.float32)
+        processed *= gain[:, np.newaxis]
+
+        if body_sos is not None and presence_sos is not None and air_sos is not None:
+            mono = np.mean(processed, axis=1).astype(np.float32)
+            adjustment = np.zeros(mono.shape[0], dtype=np.float32)
+            if role in {"chop", "resample", "tonal_glue"}:
+                body = signal.sosfiltfilt(body_sos, mono).astype(np.float32)
+                adjustment -= body * (usable_kick * (0.14 * kick_duck_strength))
+            if role in {"melody", "lead", "chop", "resample", "tonal_glue"}:
+                presence = signal.sosfiltfilt(presence_sos, mono).astype(np.float32)
+                adjustment += presence * (usable_backbeat * (0.12 * backbeat_push_strength))
+            if role in {"texture", "chop", "resample", "tonal_glue"} and air_push_strength > 0.0:
+                air = signal.sosfiltfilt(air_sos, mono).astype(np.float32)
+                adjustment += air * (usable_backbeat * (0.06 * air_push_strength))
+            adjustment = adjustment.astype(np.float32)
+            processed[:, 0] += adjustment
+            processed[:, 1] += adjustment
+
+        if width_strength > 0.0:
+            processed = _apply_width(processed, usable_width * (0.95 * width_strength))
+        processed = np.tanh(processed * (1.0 + (usable_backbeat[:, np.newaxis] * 0.08 * backbeat_push_strength))).astype(np.float32)
+        layer_renders[layer_name] = np.clip(processed, -1.0, 1.0)
+        groove_bus[: processed.shape[0]] += processed * ((usable_backbeat[:, np.newaxis] * 0.12 * max(0.5, backbeat_push_strength)) + 0.004)
+        processed_layers += 1
+        touched_roles[role] = int(touched_roles.get(role, 0)) + 1
+
+    if processed_layers <= 0:
+        return None
+
+    groove_bus = np.tanh(groove_bus * 1.04).astype(np.float32)
+    groove_bus = np.clip(groove_bus, -0.22, 0.22).astype(np.float32)
+    bus_layer_name = "sample-groove-response-bus"
+    layer_renders[bus_layer_name] = groove_bus
+    rendered_layers.append(
+        {
+            "name": bus_layer_name,
+            "role": "sample_groove",
+            "pattern": None,
+            "trigger_positions": [],
+            "source_path": None,
+            "copied_input_path": None,
+            "render_mode": "sample_stack_groove_response",
+        }
+    )
+
+    return {
+        "mode": "sample_stack_groove_response",
+        "profile": "boombap_sample_stack_groove_response_v1",
+        "bus_layer_name": bus_layer_name,
+        "selected_layers": sample_layers,
+        "processed_layers_count": int(processed_layers),
+        "kick_events_count": len(kick_events),
+        "backbeat_events_count": len(backbeat_events),
+        "touched_roles": touched_roles,
+        "groove_bus_peak": round(float(np.max(np.abs(groove_bus))) if groove_bus.size else 0.0, 6),
+        "min_gain": round(float(np.min(1.0 - (kick_duck_env * 0.16) + (backbeat_push_env * 0.06))) if total_samples else 1.0, 6),
+        "max_backbeat_push": round(float(np.max(backbeat_push_env)) if backbeat_push_env.size else 0.0, 6),
+    }
+
+
+def _apply_pattern_sample_stack_section_dialogue(
+    layer_renders: Dict[str, "np.ndarray"],
+    rendered_layers: List[Dict[str, Any]],
+    sections: Optional[Iterable[Dict[str, Any]]],
+    sample_rate: int,
+    tempo_bpm: float,
+) -> Optional[Dict[str, Any]]:
+    resolved_sections = list(sections or [])
+    if np is None or signal is None or not layer_renders or not resolved_sections:
+        return None
+
+    role_by_name = {
+        _clean_text(layer.get("name")): _clean_text(layer.get("role")).lower()
+        for layer in rendered_layers
+        if _clean_text(layer.get("name"))
+    }
+    available_layers = [name for name, role in role_by_name.items() if role in {"melody", "lead", "chop", "texture", "resample", "tonal_glue", "sample_groove"} and name in layer_renders]
+    sample_layers: List[str] = []
+    seen_layers: Set[str] = set()
+
+    def _add_first(predicate: Any) -> None:
+        if len(sample_layers) >= 3:
+            return
+        for layer_name in available_layers:
+            if layer_name in seen_layers:
+                continue
+            if predicate(layer_name):
+                sample_layers.append(layer_name)
+                seen_layers.add(layer_name)
+                return
+
+    _add_first(lambda name: role_by_name.get(name) in {"melody", "lead"})
+    _add_first(lambda name: role_by_name.get(name) == "chop" and "hook" in _clean_text(name).lower())
+    _add_first(lambda name: role_by_name.get(name) == "sample_groove")
+    _add_first(lambda name: role_by_name.get(name) == "chop")
+    _add_first(lambda name: role_by_name.get(name) == "texture")
+    _add_first(lambda name: role_by_name.get(name) == "resample")
+    _add_first(lambda name: role_by_name.get(name) == "tonal_glue")
+    if not sample_layers:
+        return None
+
+    total_samples = max(layer_renders[name].shape[0] for name in sample_layers)
+    samples_per_bar = max(1, int(round((240.0 / float(max(1.0, tempo_bpm))) * sample_rate)))
+    smoothing_samples = max(128, int(round(sample_rate * 0.022)))
+
+    call_env = np.zeros(total_samples, dtype=np.float32)
+    answer_env = np.zeros(total_samples, dtype=np.float32)
+    width_env = np.zeros(total_samples, dtype=np.float32)
+    dry_env = np.zeros(total_samples, dtype=np.float32)
+    section_events: List[Dict[str, Any]] = []
+    current_bar = 0
+
+    for section in resolved_sections:
+        section_name = _resolve_pattern_section_mix_key(section)
+        bars = max(1, int((section or {}).get("bars") or 1))
+        energy = float((section or {}).get("energy") or 0.92)
+        chop_density = float((section or {}).get("chop_density") or 0.84)
+        melodic_density = float((section or {}).get("melodic_density") or 0.88)
+        for bar_index in range(bars):
+            bar_start = min(total_samples, (current_bar + bar_index) * samples_per_bar)
+            bar_end = min(total_samples, bar_start + samples_per_bar)
+            if bar_end <= bar_start:
+                continue
+            half = max(bar_start + 1, min(bar_end, bar_start + (samples_per_bar // 2)))
+            quarter = max(bar_start + 1, min(bar_end, bar_start + (samples_per_bar // 4)))
+            three_quarter = max(half, min(bar_end, bar_start + ((samples_per_bar * 3) // 4)))
+            phase = bar_index % (2 if section_name == "hook" else 4)
+
+            if section_name == "verse":
+                call_env[bar_start:half] = np.maximum(call_env[bar_start:half], 0.42 + ((melodic_density - 0.88) * 0.16))
+                dry_env[half:bar_end] = np.maximum(dry_env[half:bar_end], 0.16 + (0.04 if phase in {1, 3} else 0.0))
+                width_env[bar_start:bar_end] = np.maximum(width_env[bar_start:bar_end], -0.04 if phase in {0, 2} else 0.0)
+            elif section_name == "pre_hook":
+                call_env[bar_start:half] = np.maximum(call_env[bar_start:half], 0.34)
+                answer_env[half:bar_end] = np.maximum(answer_env[half:bar_end], 0.4 + ((chop_density - 0.84) * 0.18))
+                width_env[quarter:bar_end] = np.maximum(width_env[quarter:bar_end], 0.05)
+                dry_env[bar_start:quarter] = np.maximum(dry_env[bar_start:quarter], 0.08)
+            elif section_name == "hook":
+                call_env[bar_start:quarter] = np.maximum(call_env[bar_start:quarter], 0.28 + ((energy - 0.92) * 0.16))
+                answer_env[half:bar_end] = np.maximum(answer_env[half:bar_end], 0.58 + ((chop_density - 0.84) * 0.22))
+                answer_env[three_quarter:bar_end] = np.maximum(answer_env[three_quarter:bar_end], 0.72)
+                width_env[half:bar_end] = np.maximum(width_env[half:bar_end], 0.1 if phase == 0 else 0.14)
+            elif section_name == "break":
+                dry_env[bar_start:bar_end] = np.maximum(dry_env[bar_start:bar_end], 0.18)
+                width_env[bar_start:bar_end] = np.maximum(width_env[bar_start:bar_end], -0.03)
+            elif section_name == "outro":
+                call_env[bar_start:half] = np.maximum(call_env[bar_start:half], 0.16)
+                dry_env[half:bar_end] = np.maximum(dry_env[half:bar_end], 0.12)
+            else:
+                call_env[bar_start:half] = np.maximum(call_env[bar_start:half], 0.24)
+                answer_env[half:bar_end] = np.maximum(answer_env[half:bar_end], 0.22)
+
+        section_events.append(
+            {
+                "section_name": section_name,
+                "bars": int(bars),
+                "energy": round(float(energy), 4),
+                "melodic_density": round(float(melodic_density), 4),
+                "chop_density": round(float(chop_density), 4),
+            }
+        )
+        current_bar += bars
+
+    def _smooth(values: "np.ndarray") -> "np.ndarray":
+        if values.size <= smoothing_samples:
+            return values.astype(np.float32)
+        kernel = np.hanning(smoothing_samples).astype(np.float32)
+        kernel_sum = float(np.sum(kernel))
+        if kernel_sum <= 0:
+            return values.astype(np.float32)
+        kernel /= kernel_sum
+        return np.convolve(values, kernel, mode="same").astype(np.float32)
+
+    call_env = np.clip(_smooth(call_env), 0.0, 1.0).astype(np.float32)
+    answer_env = np.clip(_smooth(answer_env), 0.0, 1.0).astype(np.float32)
+    width_env = np.clip(_smooth(width_env), -0.08, 0.18).astype(np.float32)
+    dry_env = np.clip(_smooth(dry_env), 0.0, 0.28).astype(np.float32)
+
+    nyquist_hz = sample_rate * 0.5
+
+    def _bandpass(low_hz: float, high_hz: float) -> Optional[Any]:
+        low = max(40.0, float(low_hz))
+        high = min(float(high_hz), nyquist_hz * 0.92)
+        if high <= low + 60.0:
+            return None
+        return signal.butter(2, [low, high], btype="bandpass", fs=sample_rate, output="sos")
+
+    body_sos = _bandpass(220.0, 980.0)
+    presence_sos = _bandpass(1500.0, 4800.0)
+    air_sos = _bandpass(4200.0, 8400.0)
+
+    dialogue_bus = np.zeros((total_samples, 2), dtype=np.float32)
+    processed_layers = 0
+    touched_roles: Dict[str, int] = {}
+
+    def _apply_width(render: "np.ndarray", env: "np.ndarray", scale: float) -> "np.ndarray":
+        if scale <= 0:
+            return render
+        mid = ((render[:, 0] + render[:, 1]) * 0.5).astype(np.float32)
+        side = ((render[:, 0] - render[:, 1]) * 0.5).astype(np.float32)
+        side *= (1.0 + (env[: side.shape[0]] * scale))
+        return np.stack([mid + side, mid - side], axis=1).astype(np.float32)
+
+    def _filter_zero_phase(sos: Optional[Any], mono: "np.ndarray") -> "np.ndarray":
+        if sos is None:
+            return np.zeros(mono.shape[0], dtype=np.float32)
+        return signal.sosfiltfilt(sos, mono).astype(np.float32)
+
+    def _filter_fast(sos: Optional[Any], mono: "np.ndarray") -> "np.ndarray":
+        if sos is None:
+            return np.zeros(mono.shape[0], dtype=np.float32)
+        return signal.sosfilt(sos, mono).astype(np.float32)
+
+    for layer_name in sample_layers:
+        render = layer_renders.get(layer_name)
+        if render is None or render.size == 0:
+            continue
+        role = role_by_name.get(layer_name, "")
+        processed = render.copy()
+        usable_call = call_env[: render.shape[0]]
+        usable_answer = answer_env[: render.shape[0]]
+        usable_width = width_env[: render.shape[0]]
+        usable_dry = dry_env[: render.shape[0]]
+
+        call_gain = 0.0
+        answer_gain = 0.0
+        body_scale = 0.0
+        presence_scale = 0.0
+        air_scale = 0.0
+        width_scale = 0.0
+        dry_scale = 0.0
+
+        if role in {"chop", "resample", "hook_memory"}:
+            call_gain = 0.015
+            answer_gain = 0.07
+            body_scale = 0.0
+            presence_scale = 0.08
+            air_scale = 0.04
+            width_scale = 0.85
+            dry_scale = 0.65
+        elif role in {"melody", "lead"}:
+            call_gain = 0.04
+            answer_gain = 0.035
+            body_scale = 0.0
+            presence_scale = 0.04
+            air_scale = 0.0
+            width_scale = 0.36
+            dry_scale = 0.45
+        elif role == "texture":
+            call_gain = -0.02
+            answer_gain = 0.025
+            body_scale = 0.0
+            presence_scale = 0.0
+            air_scale = 0.02
+            width_scale = 0.58
+            dry_scale = 0.8
+        elif role == "tonal_glue":
+            call_gain = 0.0
+            answer_gain = 0.04
+            body_scale = 0.0
+            presence_scale = 0.03
+            air_scale = 0.015
+            width_scale = 0.6
+            dry_scale = 0.5
+        elif role == "sample_groove":
+            call_gain = 0.0
+            answer_gain = 0.03
+            body_scale = 0.0
+            presence_scale = 0.0
+            air_scale = 0.0
+            width_scale = 0.32
+            dry_scale = 0.0
+
+        gain = (1.0 + (usable_call * call_gain) + (usable_answer * answer_gain) - (usable_dry * dry_scale))
+        gain = np.clip(gain, 0.74, 1.12).astype(np.float32)
+        processed *= gain[:, np.newaxis]
+
+        if body_sos is not None and presence_sos is not None and air_sos is not None:
+            mono = np.mean(processed, axis=1).astype(np.float32)
+            adjustment = np.zeros(mono.shape[0], dtype=np.float32)
+            if body_scale != 0.0 and role in {"melody", "lead", "chop", "resample", "texture", "tonal_glue"}:
+                body = _filter_zero_phase(body_sos, mono)
+                adjustment += body * ((usable_call * body_scale) + (usable_answer * (body_scale * 0.4)))
+            if presence_scale != 0.0 and role in {"melody", "lead", "chop", "resample", "tonal_glue", "sample_groove"}:
+                presence = _filter_fast(presence_sos, mono)
+                adjustment += presence * ((usable_answer * presence_scale) - (usable_dry * (presence_scale * 0.22)))
+            if air_scale != 0.0 and role in {"chop", "resample", "texture", "tonal_glue", "sample_groove"}:
+                air = _filter_fast(air_sos, mono)
+                adjustment += air * ((usable_answer * air_scale) - (usable_dry * (air_scale * 0.2)))
+            adjustment = adjustment.astype(np.float32)
+            processed[:, 0] += adjustment
+            processed[:, 1] += adjustment
+
+        if width_scale > 0.0:
+            processed = _apply_width(processed, usable_width, width_scale)
+        processed = np.tanh(processed * (1.0 + (usable_answer[:, np.newaxis] * 0.045))).astype(np.float32)
+        layer_renders[layer_name] = np.clip(processed, -1.0, 1.0)
+        dialogue_bus[: processed.shape[0]] += processed * (((usable_answer[:, np.newaxis] * 0.08) + (usable_call[:, np.newaxis] * 0.03)) * max(0.3, width_scale or 0.4))
+        processed_layers += 1
+        touched_roles[role] = int(touched_roles.get(role, 0)) + 1
+
+    if processed_layers <= 0:
+        return None
+
+    dialogue_bus = np.tanh(dialogue_bus * 1.05).astype(np.float32)
+    dialogue_bus = np.clip(dialogue_bus, -0.2, 0.2).astype(np.float32)
+    bus_layer_name = "sample-section-dialogue-bus"
+    layer_renders[bus_layer_name] = dialogue_bus
+    rendered_layers.append(
+        {
+            "name": bus_layer_name,
+            "role": "sample_dialogue",
+            "pattern": None,
+            "trigger_positions": [],
+            "source_path": None,
+            "copied_input_path": None,
+            "render_mode": "sample_stack_section_dialogue",
+        }
+    )
+
+    return {
+        "mode": "sample_stack_section_dialogue",
+        "profile": "boombap_sample_stack_section_dialogue_v1",
+        "bus_layer_name": bus_layer_name,
+        "selected_layers": sample_layers,
+        "processed_layers_count": int(processed_layers),
+        "touched_roles": touched_roles,
+        "events": section_events,
+        "events_count": len(section_events),
+        "dialogue_bus_peak": round(float(np.max(np.abs(dialogue_bus))) if dialogue_bus.size else 0.0, 6),
+        "call_peak": round(float(np.max(call_env)) if call_env.size else 0.0, 6),
+        "answer_peak": round(float(np.max(answer_env)) if answer_env.size else 0.0, 6),
+    }
 
 
 def _apply_pattern_producer_transitions(
@@ -12864,10 +15465,16 @@ def render_pattern_beat(request: PatternBeatRequest) -> Dict[str, Any]:
         else (zlib.crc32(f"{request.label}:{request.tempo_bpm}:{bars}:{steps_per_bar}".encode("utf-8")) & 0xFFFFFFFF)
     )
     rng = np.random.default_rng(jitter_seed)
+    render_started_at = time.perf_counter()
+    stage_timings_ms: Dict[str, float] = {}
+
+    def _record_stage_timing(stage_name: str, started_at: float) -> None:
+        stage_timings_ms[stage_name] = round((time.perf_counter() - started_at) * 1000.0, 3)
 
     rendered_layers: List[Dict[str, Any]] = []
     longest_sample_length = 0
     prepared_layers = []
+    stage_started_at = time.perf_counter()
     for layer in request.layers:
         source_path = _resolve_existing_path(layer.audio_path)
         copied_input_path = _copy_into_directory(source_path, run_dirs["inputs_dir"])
@@ -12888,6 +15495,7 @@ def render_pattern_beat(request: PatternBeatRequest) -> Dict[str, Any]:
                 "pattern": _parse_pattern(layer.pattern, bars=bars, steps_per_bar=steps_per_bar),
             }
         )
+    _record_stage_timing("prepare_layers", stage_started_at)
 
     base_total_samples = int(math.ceil((total_steps * seconds_per_step) * request.sample_rate))
     required_total_samples = base_total_samples
@@ -12911,6 +15519,7 @@ def render_pattern_beat(request: PatternBeatRequest) -> Dict[str, Any]:
     master = np.zeros((total_samples, 2), dtype=np.float32)
     layer_renders: Dict[str, "np.ndarray"] = {}
 
+    stage_started_at = time.perf_counter()
     for prepared in prepared_layers:
         layer = prepared["layer"]
         pattern = prepared["pattern"]
@@ -13003,8 +15612,10 @@ def render_pattern_beat(request: PatternBeatRequest) -> Dict[str, Any]:
                 "copied_input_path": prepared["copied_input_path"],
             }
         )
+    _record_stage_timing("render_triggers", stage_started_at)
 
     section_mix_manifests: Dict[str, Dict[str, Any]] = {}
+    stage_started_at = time.perf_counter()
     for prepared in prepared_layers:
         layer = prepared["layer"]
         layer_name = layer.name or os.path.splitext(os.path.basename(layer.audio_path))[0]
@@ -13020,6 +15631,7 @@ def render_pattern_beat(request: PatternBeatRequest) -> Dict[str, Any]:
         )
         if section_mix_manifest:
             section_mix_manifests[layer_name] = section_mix_manifest
+    _record_stage_timing("section_mix", stage_started_at)
 
     transition_sections = None
     for prepared in prepared_layers:
@@ -13027,6 +15639,7 @@ def render_pattern_beat(request: PatternBeatRequest) -> Dict[str, Any]:
         if candidate_sections:
             transition_sections = candidate_sections
             break
+    stage_started_at = time.perf_counter()
     producer_transitions_manifest = _apply_pattern_producer_transitions(
         layer_renders=layer_renders,
         rendered_layers=rendered_layers,
@@ -13034,24 +15647,112 @@ def render_pattern_beat(request: PatternBeatRequest) -> Dict[str, Any]:
         sample_rate=int(request.sample_rate),
         tempo_bpm=float(request.tempo_bpm),
     )
+    _record_stage_timing("producer_transitions", stage_started_at)
+    stage_started_at = time.perf_counter()
     motif_sample_glue_manifest = _apply_pattern_motif_sample_glue(
         layer_renders=layer_renders,
         rendered_layers=rendered_layers,
         sample_rate=int(request.sample_rate),
     )
+    _record_stage_timing("motif_sample_glue", stage_started_at)
+    stage_started_at = time.perf_counter()
+    topline_signature_manifest = _apply_pattern_topline_signature(
+        layer_renders=layer_renders,
+        rendered_layers=rendered_layers,
+        sections=transition_sections,
+        sample_rate=int(request.sample_rate),
+        tempo_bpm=float(request.tempo_bpm),
+    )
+    _record_stage_timing("topline_signature", stage_started_at)
+    stage_started_at = time.perf_counter()
+    tonal_memory_bus_manifest = _apply_pattern_tonal_memory_bus(
+        layer_renders=layer_renders,
+        rendered_layers=rendered_layers,
+        sections=transition_sections,
+        sample_rate=int(request.sample_rate),
+        tempo_bpm=float(request.tempo_bpm),
+    )
+    _record_stage_timing("tonal_memory_bus", stage_started_at)
+    stage_started_at = time.perf_counter()
+    ensemble_section_contrast_manifest = _apply_pattern_ensemble_section_contrast(
+        layer_renders=layer_renders,
+        rendered_layers=rendered_layers,
+        sections=transition_sections,
+        sample_rate=int(request.sample_rate),
+        tempo_bpm=float(request.tempo_bpm),
+    )
+    _record_stage_timing("ensemble_section_contrast", stage_started_at)
+    stage_started_at = time.perf_counter()
+    hook_memory_lift_manifest = _apply_pattern_hook_memory_lift(
+        layer_renders=layer_renders,
+        rendered_layers=rendered_layers,
+        sections=transition_sections,
+        sample_rate=int(request.sample_rate),
+        tempo_bpm=float(request.tempo_bpm),
+    )
+    _record_stage_timing("hook_memory_lift", stage_started_at)
+    stage_started_at = time.perf_counter()
+    drum_turnarounds_manifest = _apply_pattern_drum_turnarounds(
+        layer_renders=layer_renders,
+        rendered_layers=rendered_layers,
+        sections=transition_sections,
+        sample_rate=int(request.sample_rate),
+        tempo_bpm=float(request.tempo_bpm),
+    )
+    _record_stage_timing("drum_turnarounds", stage_started_at)
+    stage_started_at = time.perf_counter()
+    drum_section_evolution_manifest = _apply_pattern_drum_section_evolution(
+        layer_renders=layer_renders,
+        rendered_layers=rendered_layers,
+        sections=transition_sections,
+        sample_rate=int(request.sample_rate),
+        tempo_bpm=float(request.tempo_bpm),
+    )
+    _record_stage_timing("drum_section_evolution", stage_started_at)
+    stage_started_at = time.perf_counter()
+    drum_kit_character_manifest = _apply_pattern_drum_kit_character(
+        layer_renders=layer_renders,
+        rendered_layers=rendered_layers,
+        sections=transition_sections,
+        sample_rate=int(request.sample_rate),
+        tempo_bpm=float(request.tempo_bpm),
+    )
+    _record_stage_timing("drum_kit_character", stage_started_at)
+    stage_started_at = time.perf_counter()
+    sample_stack_groove_response_manifest = _apply_pattern_sample_stack_groove_response(
+        layer_renders=layer_renders,
+        rendered_layers=rendered_layers,
+        sample_rate=int(request.sample_rate),
+    )
+    _record_stage_timing("sample_stack_groove_response", stage_started_at)
+    stage_started_at = time.perf_counter()
+    sample_stack_section_dialogue_manifest = _apply_pattern_sample_stack_section_dialogue(
+        layer_renders=layer_renders,
+        rendered_layers=rendered_layers,
+        sections=transition_sections,
+        sample_rate=int(request.sample_rate),
+        tempo_bpm=float(request.tempo_bpm),
+    )
+    _record_stage_timing("sample_stack_section_dialogue", stage_started_at)
 
+    stage_started_at = time.perf_counter()
     kick_bass_sidechain_manifest = _apply_pattern_kick_bass_sidechain(
         layer_renders=layer_renders,
         rendered_layers=rendered_layers,
         sample_rate=int(request.sample_rate),
     )
+    _record_stage_timing("kick_bass_sidechain", stage_started_at)
+    stage_started_at = time.perf_counter()
     drum_bus_glue_manifest = _apply_pattern_drum_bus_glue(
         layer_renders=layer_renders,
         rendered_layers=rendered_layers,
         sample_rate=int(request.sample_rate),
     )
+    _record_stage_timing("drum_bus_glue", stage_started_at)
+    stage_started_at = time.perf_counter()
     for layer_name, layer_render in layer_renders.items():
         master += layer_render
+    _record_stage_timing("sum_layers", stage_started_at)
 
     macro_mix_sections = None
     for prepared in prepared_layers:
@@ -13059,12 +15760,14 @@ def render_pattern_beat(request: PatternBeatRequest) -> Dict[str, Any]:
         if candidate_sections:
             macro_mix_sections = candidate_sections
             break
+    stage_started_at = time.perf_counter()
     macro_mix_manifest = _apply_pattern_macro_mix(
         master=master,
         sections=macro_mix_sections,
         sample_rate=int(request.sample_rate),
         tempo_bpm=float(request.tempo_bpm),
     )
+    _record_stage_timing("macro_mix", stage_started_at)
 
     for rendered_layer in rendered_layers:
         layer_name = _clean_text(rendered_layer.get("name"))
@@ -13107,7 +15810,9 @@ def render_pattern_beat(request: PatternBeatRequest) -> Dict[str, Any]:
         run_dirs["beats_dir"],
         f"{_slugify(request.label)}_pattern_beat.wav",
     )
+    stage_started_at = time.perf_counter()
     _write_audio_array_to_wav(master, output_path, sample_rate=request.sample_rate)
+    _record_stage_timing("write_output_wav", stage_started_at)
 
     project_session = None
     if request.persist_to_project and request.project_id:
@@ -13128,9 +15833,24 @@ def render_pattern_beat(request: PatternBeatRequest) -> Dict[str, Any]:
         "section_mix_manifests": section_mix_manifests,
         "producer_transitions_manifest": producer_transitions_manifest,
         "motif_sample_glue_manifest": motif_sample_glue_manifest,
+        "topline_signature_manifest": topline_signature_manifest,
+        "tonal_memory_bus_manifest": tonal_memory_bus_manifest,
+        "ensemble_section_contrast_manifest": ensemble_section_contrast_manifest,
+        "hook_memory_lift_manifest": hook_memory_lift_manifest,
+        "drum_turnarounds_manifest": drum_turnarounds_manifest,
+        "drum_section_evolution_manifest": drum_section_evolution_manifest,
+        "drum_kit_character_manifest": drum_kit_character_manifest,
+        "sample_stack_groove_response_manifest": sample_stack_groove_response_manifest,
+        "sample_stack_section_dialogue_manifest": sample_stack_section_dialogue_manifest,
         "kick_bass_sidechain_manifest": kick_bass_sidechain_manifest,
         "drum_bus_glue_manifest": drum_bus_glue_manifest,
         "macro_mix_manifest": macro_mix_manifest,
+        "render_timing": {
+            "total_ms": round((time.perf_counter() - render_started_at) * 1000.0, 3),
+            "stages_ms": stage_timings_ms,
+            "layers_count": len(rendered_layers),
+            "prepared_layers_count": len(prepared_layers),
+        },
         "normalization_gain": round(float(normalization_gain), 6),
         "humanization": {
             "timing_jitter_ratio": round(float(timing_jitter_ratio), 4),

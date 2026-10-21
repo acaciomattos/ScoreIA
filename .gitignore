@@ -149,6 +149,7 @@ env.bak/
 venv.bak/
 projects/
 tools/mpv/
+OpenVINO-AI-Plugins.exe
 
 # Spyder project settings
 .spyderproject

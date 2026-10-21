@@ -342,6 +342,38 @@ Observacoes:
 - o render agora tambem aplica um passe `motif_sample_glue_v1`, abrindo e duckando levemente
   `texture`, `chops` e `resample-motif` em volta da melodia principal para que o stack sampleado
   soe mais coeso.
+- o render agora tambem adiciona `motif_tonal_memory_bus_v1`, uma cama tonal paralela e sensivel a
+  secao derivada de `melody`, `hook chops`, `resample-motif` e `texture`, reforcando memoria de
+  refrÃƒÂ£o e assinatura emocional sem abrir novos controles no webapp.
+- o render agora tambem aplica `boombap_ensemble_section_contrast_v1`, um passe coletivo de
+  contraste por secao para `drums`, `bass` e `sample stack`, deixando `verse`, `pre_hook`, `hook`,
+  `break` e `outro` responderem como blocos musicais com mais intencao e menos cara de loop rico
+  continuo.
+- o render agora tambem aplica `boombap_hook_memory_lift_v1`, reforcando pulsos recorrentes do
+  refrÃ£o em `melody`, `hook chops`, `resample`, `tonal glue` e numa camada paralela
+  `hook-memory-bus`, para o hook soar mais lembravel e menos como apenas uma secao mais alta.
+- a bateria agora tambem passa por `boombap_drum_turnarounds_v1`, criando fills curtos nas bordas
+  de secao e uma camada paralela `drum-turnaround-bus` antes de entradas importantes como
+  `pre_hook`, `hook`, `break` e retomadas, para o beat soar mais produzido a mao.
+- o render agora tambem aplica `boombap_drum_section_evolution_v1`, variando `hat`, `perc`,
+  `snare`, `clap` e `kick` dentro da propria secao e adicionando uma camada `drum-evolution-bus`
+  para que verso e refrÃ£o continuem se movendo mesmo antes da proxima transicao.
+- a bateria agora tambem passa por `boombap_drum_kit_character_v1`, mudando a cor de `kick`,
+  `snare`, `clap`, hats, perc e `drum_bed` por secao e adicionando uma camada
+  `drum-kit-character-bus`, para que `verse`, `pre_hook`, `hook` e `break` soem como o mesmo kit
+  empurrado para direcoes diferentes.
+- o render agora tambem aplica `boombap_sample_stack_groove_response_v1`, fazendo `melody`,
+  `chops`, `texture`, `resample` e suporte tonal responderem com mais clareza ao movimento de
+  `kick/backbeat`, alem de criar uma camada `sample-groove-response-bus` para o sample stack
+  respirar com a bateria em vez de apenas ficar por cima dela.
+- o sample stack agora tambem passa por `boombap_sample_stack_section_dialogue_v1`, criando um
+  call/answer mais claro entre `verse`, `pre_hook` e `hook` e adicionando uma camada
+  `sample-section-dialogue-bus`, para as camadas musicais soarem mais conversacionais entre secoes.
+- depois dessa cola base, o render agora tambem aplica `motif_topline_signature_v1`, refinando a
+  hierarquia do topo harmonico: `hook chops` ganham mais mordida/largura em momentos de refrÃ£o,
+  `resample-motif` recebe lift harmonico mais intencional, `texture` fica menos embarrada e a
+  melodia principal cede um pouco de pressao em upper-mids para o stack soar menos "camadas
+  corretas em paralelo" e mais sampleado/com assinatura.
 - como os bancos extras de chop aumentaram a complexidade do render, a fase 7 agora tambem usa
   cache do ranking base de candidatos de chop por referencia/variante, reduzindo o custo do stack
   mais rico sem mudar a selecao musical.
